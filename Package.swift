@@ -5,6 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "cerbo-app",
+    platforms: [.iOS(.v17), .macOS(.v14)],   // T-7: iOS 17+ (Swift Charts interactions, SwiftData); macOS 14 for swift test on the Mac
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(

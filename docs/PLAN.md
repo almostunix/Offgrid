@@ -217,7 +217,7 @@ This plan outlines the steps to build a native Swift app for iPhone and iPad Pro
 1. Should the app integrate with VRM API for detailed history (requires internet)?
 2. ~~MQTT library~~ Decided (T-5, 2026-10-14): CocoaMQTT, pinned to an exact version. The connection state machine wraps it.
 3. ~~Controls/writes~~ Decided (T-6, 2026-10-14): phase 1 (this whole plan) is read-only. Phase 2 will add interactive features later and is planned separately, after phase 1 ships.
-4. What minimum iOS version (iOS 17+ or older)?
+4. ~~Minimum iOS~~ Decided (T-7, 2026-10-14): iOS 17+.
 
 ## Victron MQTT facts (checked 2026-10-14)
 
@@ -245,3 +245,6 @@ Standing rule from the user: don't reinvent the wheel. Use an established open-s
 - Charts, zoom, pan, scrub: Swift Charts (T-24, T-25), which requires iOS 17. History cache: SwiftData (T-27). Share/CSV: ShareLink + Transferable (T-28). iPad layout: NavigationSplitView, LazyVGrid + draggable/dropDestination (T-29, T-30). Search: .searchable (T-32).
 - Fuzzing: Swift Testing parameterized tests with a seeded generator (T-34). Logging redaction: os.Logger privacy. Pinning: SecTrust + CryptoKit via CocoaMQTT's trust callback (T-35).
 - Project generation: XcodeGen (T-19). App Store screenshots, metadata and TestFlight: fastlane (MIT) (T-38).
+
+## Decision: minimum iOS 17 (T-7, 2026-10-14)
+The user chose iOS 17+. Swift Charts' built-in zoom, pan and scrub (`chartScrollableAxes`, `chartXSelection`) and SwiftData need it. Package.swift declares `.iOS(.v17)` and `.macOS(.v14)` (macOS 14 so `swift test` runs on the Mac with the same APIs). T-19's project.yml must use `deploymentTarget: iOS: "17.0"`.
