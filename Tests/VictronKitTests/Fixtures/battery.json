@@ -1,0 +1,12 @@
+{
+  "portalId": "c0ffee000001",
+  "messages": [
+    {"topic": "N/c0ffee000001/battery/279/ProductName", "payload": {"value": "Victron SmartShunt 500A"}},
+    {"topic": "N/c0ffee000001/battery/279/Dc/0/Voltage", "payload": {"value": 12.8}},
+    {"topic": "N/c0ffee000001/battery/279/Dc/0/Current", "payload": {"value": 5.2}},
+    {"topic": "N/c0ffee000001/battery/279/Dc/0/Power", "payload": {"value": 66.56}},
+    {"topic": "N/c0ffee000001/battery/279/Soc", "payload": {"value": 78.5}},
+    {"topic": "N/c0ffee000001/battery/279/TimeToGo", "payload": {"value": 3600}},
+    {"topic": "N/c0ffee000001/battery/279/ConsumedAmphours", "payload": {"value": 250.5}}
+  ]
+}

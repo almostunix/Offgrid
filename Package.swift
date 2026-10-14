@@ -25,6 +25,7 @@ let package = Package(
             ]),
         .testTarget(
             name: "VictronKitTests",
-            dependencies: ["VictronKit"]),
+            dependencies: ["VictronKit"],
+            resources: [.copy("Fixtures")]),
     ]
 )
