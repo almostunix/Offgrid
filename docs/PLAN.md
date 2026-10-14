@@ -235,3 +235,13 @@ Sources: [dbus-flashmq README](https://github.com/victronenergy/dbus-flashmq) (t
   - solarcharger: `Pv/V` (single tracker; `Pv/<n>/V` for multi-tracker), `Yield/Power` (W), `Yield/User` (kWh), `Dc/0/Voltage`, `Dc/0/Current`, `State` (0 Off, 2 Fault, 3 Bulk, 4 Absorption, 5 Float, 6 Storage, 7 Equalize, 252 External control). Daily history `History/Daily/<n>/` (n = 0 is today, about 30 days): `Yield` (kWh), `MaxPower` (W), `MaxPvVoltage` (V), `TimeInBulk`/`TimeInAbsorption`/`TimeInFloat` (minutes, inferred), `MinBatteryVoltage`, `MaxBatteryVoltage`, `MaxBatteryCurrent`. Per tracker: `History/Daily/<n>/Pv/<i>/Yield`.
   - vebus: `Ac/ActiveIn/L1/P`, `Ac/Out/L1/P` (W), `Mode` (1 Charger only, 2 Inverter only, 3 On, 4 Off), `State` (0 Off, 1 Low power, 2 Fault, 3 Bulk, 4 Absorption, 5 Float, 6 Storage, 7 Equalize, 8 Passthru, 9 Inverting, 10 Power assist, 11 Power supply, 244 Sustain, 252 External control).
 - **Battery history over the LAN** is device totals, not a time series. Daily solar history is the only per-day series. Detailed history is VRM's (decision card T-3).
+
+## Tools we use instead of hand-building (2026-10-14)
+
+Standing rule from the user: don't reinvent the wheel. Use an established open-source tool or an Apple framework where one fits (see CLAUDE.md).
+- Test broker: Mosquitto (EPL/EDL, Homebrew) on 127.0.0.1, started by tests, with a CocoaMQTT fixture replayer (T-11), and TLS/password via Mosquitto config and openssl (T-12).
+- MQTT client: CocoaMQTT 2.4.1 (MIT), including its auto-reconnect with capped backoff and MQTT keep-alive (T-16).
+- Rolling buffers: swift-collections Deque (Apple, Apache-2.0) (T-23).
+- Charts, zoom, pan, scrub: Swift Charts (T-24, T-25), which requires iOS 17. History cache: SwiftData (T-27). Share/CSV: ShareLink + Transferable (T-28). iPad layout: NavigationSplitView, LazyVGrid + draggable/dropDestination (T-29, T-30). Search: .searchable (T-32).
+- Fuzzing: Swift Testing parameterized tests with a seeded generator (T-34). Logging redaction: os.Logger privacy. Pinning: SecTrust + CryptoKit via CocoaMQTT's trust callback (T-35).
+- Project generation: XcodeGen (T-19). App Store screenshots, metadata and TestFlight: fastlane (MIT) (T-38).
