@@ -5,7 +5,8 @@
     {"topic": "N/c0ffee000001/system/0/Dc/Battery/Soc", "payload": {"value": 78.5}},
     {"topic": "N/c0ffee000001/system/0/Dc/Battery/Power", "payload": {"value": 66.56}},
     {"topic": "N/c0ffee000001/system/0/Dc/Pv/Power", "payload": {"value": 1250}},
-    {"topic": "N/c0ffee000001/system/0/Ac/Consumption/L1/Power", "payload": {"value": 1500}},
+    {"topic": "N/c0ffee000001/system/0/Ac/ConsumptionOnOutput/L1/Power", "payload": {"value": 1180}},
+    {"topic": "N/c0ffee000001/system/0/Ac/ConsumptionOnInput/L1/Power", "payload": {"value": 320}},
     {"topic": "N/c0ffee000001/system/0/Dc/Battery/TimeToGo", "payload": {"value": 3600}}
   ]
 }

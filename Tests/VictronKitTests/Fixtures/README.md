@@ -2,17 +2,17 @@
 
 These fixture files represent MQTT messages from a Victron Cerbo GX device with a fake portal ID `c0ffee000001`.
 
-Topic names follow Victron's [dbus/MQTT documentation](https://www.victronenergy.com/live/vebus:product_template:0:documentation) and are marked "to verify against the docs".
+Topic names were checked on 2026-10-14 against Victron's [dbus-flashmq README](https://github.com/victronenergy/dbus-flashmq) (topic layout, payloads, keepalive) and [D-Bus paths wiki](https://github.com/victronenergy/venus/wiki/dbus). The solar charger daily history fields come from [gui-v2](https://github.com/victronenergy/gui-v2) (`data/common/SolarDailyHistory.qml`, mock `data/mock/conf/services/mppt1.json`), because the wiki doesn't list them. Device instance numbers (276, 278, 279) are made up. See docs/PLAN.md, "Victron MQTT facts".
 
 ## History
 
-History topics provide aggregated data over time periods. Topic names to verify against Victron's dbus documentation:
+History topics provide aggregated data over time periods:
 
 - `N/{portalId}/solarcharger/{deviceId}/History/Daily/{n}/{field}` - Daily history for solar charger (n=0 is today, n=29 is 29 days ago)
   - Yield: kWh (energy produced that day)
   - MaxPower: W (maximum power output)
   - MaxPvVoltage: V (maximum PV voltage)
-  - TimeInBulk: s (time spent in bulk charging mode)
+  - TimeInBulk: minutes (time spent in bulk that day; unit inferred from gui-v2's mock data, not documented)
 
 - `N/{portalId}/battery/{deviceId}/History/{field}` - Battery history statistics
   - ChargeCycles: count (number of full charge/discharge cycles)
