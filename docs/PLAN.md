@@ -146,7 +146,7 @@ This plan outlines the steps to build a native Swift app for iPhone and iPad Pro
 **Goal:** Ensure the app is safe for first contact with real Cerbo
 
 **What gets built:**
-- Read-only guarantee test (client can never publish W/ topics)
+- Read-only guarantee: every publish goes through one wrapper that allows only `R/<portalId>/...` topics (keepalive and read requests, which Venus OS needs before it streams data) and rejects `W/` and anything else, with a test proving it. This wrapper is the single seam that phase 2 will extend.
 - Connection timeouts and caps on reconnect backoff
 - Malformed-payload fuzz tests for topic parser
 - Keepalive storm prevention (one R/keepalive every ~30 seconds)
@@ -199,7 +199,7 @@ This plan outlines the steps to build a native Swift app for iPhone and iPad Pro
 - **No real device during development:** Build mock MQTT broker and use documented topic fixtures
 - **iOS background limitations:** Design for foreground operation only, no background logging
 - **Local Network permissions:** Implement `NSLocalNetworkUsageDescription` (no mDNS services)
-- **Read-only guarantee:** Architectural constraint enforced by tests, no W/ message publishing
+- **Read-only guarantee:** all publishes go through one wrapper that allows only `R/` topics; `W/` and anything else are rejected, enforced by tests
 
 ## Success Criteria
 
@@ -215,6 +215,6 @@ This plan outlines the steps to build a native Swift app for iPhone and iPad Pro
 ## Open Questions for the User
 
 1. Should the app integrate with VRM API for detailed history (requires internet)?
-2. MQTT library choice: own client on Network.framework vs CocoaMQTT?
-3. Should controls/writes (W/ topics) ever be implemented, or stay read-only?
+2. ~~MQTT library~~ Decided (T-5, 2026-10-14): CocoaMQTT, pinned to an exact version. The connection state machine wraps it.
+3. ~~Controls/writes~~ Decided (T-6, 2026-10-14): phase 1 (this whole plan) is read-only. Phase 2 will add interactive features later and is planned separately, after phase 1 ships.
 4. What minimum iOS version (iOS 17+ or older)?
