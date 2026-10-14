@@ -1,43 +1,44 @@
 # Cerbo GX App Development Plan
 
-This plan outlines the steps to build a native Swift app for iPhone and iPad Pro that connects to Victron's Cerbo GX hardware over local Wi-Fi network using MQTT protocol, addressing the gaps identified in existing Victron apps.
+This plan outlines the steps to build a native Swift app for iPhone and iPad Pro that connects to Victron's Cerbo GX hardware over local Wi-Fi network using MQTT protocol. The app adds LAN-based history charts and multi-device comparison capabilities that VictronConnect lacks, while staying read-only and never contacting the real Cerbo without explicit user approval.
 
-## Step 1: Project Setup and Core Infrastructure
+## Step 1: Simulator and Test Fixtures (No Device Contact)
 
-**Goal:** Establish project structure and implement MQTT communication
+**Goal:** Build a complete test environment without touching the real Cerbo
 
 **What gets built:**
-- Swift Package Manager project with VictronKit framework
-- Xcode project generated with XcodeGen
-- MQTT 3.1.1 client using Network.framework (CONNECT, SUBSCRIBE, PUBLISH at QoS 0, PINGREQ)
-- Topic parsing for `N/<portalId>/<service>/<instance>/<path>` format
-- Connection management with automatic reconnect and backoff
-- Data models for Cerbo devices and measurements
+- Local mock MQTT broker or simulator supporting:
+  - Plain TCP 1883 and TLS 8883 with username/password
+  - Self-signed certificate handling
+  - Full publish response with sample devices (solar charger, battery, VE.Bus inverter)
+  - History summaries (solar charger daily yield, battery monitor totals)
+- Fixture files from Victron's documented MQTT topics (not from the real device)
+- Test harness that runs all subsequent tests against the simulator
 
 **How we know it's done:**
-- MQTT client connects to Cerbo GX and receives topic updates
-- Topic parsing correctly extracts device data
-- Connection state machine handles reconnects properly
-- Unit tests pass for MQTT client and data models
+- Simulator accepts connections on both 1883 and 8883
+- Full publish returns expected topic structure
+- History summaries match documented format
+- All unit tests pass against simulator
 
-## Step 2: Connection Discovery and Management
+## Step 2: Connection Management
 
-**Goal:** Implement Cerbo GX discovery and connection configuration
+**Goal:** Implement secure MQTT connection with manual host entry
 
 **What gets built:**
-- mDNS discovery for `venus.local`
-- Manual IP entry with port and TLS configuration
+- Manual host entry (IP address or hostname) with port and TLS configuration
 - Portal ID auto-detection from MQTT messages
-- Saved Cerbo configurations
+- Saved Cerbo configurations with credential storage in Keychain
 - Connection status bar
-- Keepalive message handling (every 30 seconds)
+- Keepalive message handling (one R/keepalive every ~30 seconds)
+- Support for both plain 1883 and TLS 8883 with username/password
 
 **How we know it's done:**
-- App discovers Cerbo GX via mDNS
-- Manual connection works with IP address
-- Portal ID is automatically detected
-- Saved configurations persist between app launches
+- Manual connection works with IP address against simulator
+- Portal ID is automatically detected from topics
+- Saved configurations persist with credentials secured in Keychain
 - Connection status updates correctly
+- Keepalive messages sent at proper intervals
 
 ## Step 3: Live Data Visualization
 
@@ -54,7 +55,6 @@ This plan outlines the steps to build a native Swift app for iPhone and iPad Pro
 - Power-flow diagram animates with live data
 - All device pages display correct information
 - UI adapts to dark mode and Dynamic Type
-- Data updates in real-time with <100ms latency
 
 ## Step 4: Charting System
 
@@ -66,6 +66,7 @@ This plan outlines the steps to build a native Swift app for iPhone and iPad Pro
 - Pinch-to-zoom, drag-to-pan, and scrub-with-crosshair
 - Min/max/avg bands
 - Energy bar charts (day, week, month)
+- Data sources: rolling live charts use values received while the app is open (kept in memory); day/week/month energy bars use the Cerbo's History/Daily summaries from Step 5
 
 **How we know it's done:**
 - Charts display live data with proper time axis
@@ -73,22 +74,26 @@ This plan outlines the steps to build a native Swift app for iPhone and iPad Pro
 - Multiple series can be compared on same chart
 - Energy bar charts show correct totals
 
-## Step 5: History Recording and Management
+## Step 5: Batched History Fetch on Open
 
-**Goal:** Store and retrieve historical data while app is open
+**Goal:** Fetch and cache history summaries when app opens
 
 **What gets built:**
-- SwiftData storage for time-series measurements
-- Data compaction to 1-minute averages
-- Historical chart rendering
-- CSV export for any chart range
-- Data gap handling
+- Batched history fetch from Cerbo's per-device summaries:
+  - Solar charger daily yield (History/Daily/<n>/...)
+  - Battery monitor totals (History/... cycles, deepest discharge, energy in/out)
+  - Topic names to verify against Victron's dbus/MQTT documentation (not against the device)
+  - The Cerbo has no minute-level history; detailed history depends on open question 1 (VRM)
+- SwiftData cache for fetched history
+- Pull-to-refresh for manual history update
+- Historical chart rendering from cache
+- CSV export for cached data ranges
 
 **How we know it's done:**
-- Historical data persists between app sessions
-- Charts show historical data correctly
-- CSV export contains expected data
-- Data compaction reduces storage usage
+- History fetch works against simulator with documented topic names
+- Charts show history from cache correctly
+- CSV export contains cached data
+- Pull-to-refresh updates cache and charts
 
 ## Step 6: iPad Pro Layout and Dashboard
 
@@ -127,7 +132,7 @@ This plan outlines the steps to build a native Swift app for iPhone and iPad Pro
 **What gets built:**
 - Topic explorer showing raw MQTT topics and values
 - Searchable topic list
-- Demo mode with recorded MQTT session playback
+- Demo mode that plays back a simulator session (a real recording replaces it after Step 10)
 - Data logging for debugging
 
 **How we know it's done:**
@@ -136,24 +141,42 @@ This plan outlines the steps to build a native Swift app for iPhone and iPad Pro
 - Demo mode plays back recorded session
 - Log files contain useful debugging information
 
-## Step 9: Testing and Optimization
+## Step 9: Security Hardening and Read-Only Guarantee
 
-**Goal:** Ensure reliability and performance
+**Goal:** Ensure the app is safe for first contact with real Cerbo
 
 **What gets built:**
-- Unit tests for MQTT client, data models, and storage
-- Integration tests for data flow and UI
-- Mock MQTT server for testing without real device
-- Performance optimization for chart rendering
-- Memory usage optimization
+- Read-only guarantee test (client can never publish W/ topics)
+- Connection timeouts and caps on reconnect backoff
+- Malformed-payload fuzz tests for topic parser
+- Keepalive storm prevention (one R/keepalive every ~30 seconds)
+- Certificate pinning for TLS connections
+- Credential sanitization in logs
 
 **How we know it's done:**
-- Test coverage >80% for critical components
-- All tests pass consistently
-- Chart rendering maintains 60 FPS
-- Memory usage <100MB during typical use
+- Read-only test passes (no W/ messages can be sent)
+- Timeouts prevent hanging connections
+- Parser handles malformed payloads without crashing
+- Keepalive rate is stable under network conditions
+- TLS connections use pinned certificates
 
-## Step 10: App Store Preparation
+## Step 10: First Contact with Real Cerbo (Requires User Approval)
+
+**Goal:** Verify app works with real Cerbo GX (read-only, with approval)
+
+**What gets built:**
+- Read-only connection to real Cerbo GX
+- Recording of ~30 minutes of MQTT traffic
+- Comparison with simulator fixtures
+- Documentation of any topic differences
+
+**How we know it's done:**
+- App connects successfully to real Cerbo
+- Recorded traffic matches fixture structure
+- Any differences documented for future reference
+- No writes sent to device
+
+## Step 11: App Store Preparation
 
 **Goal:** Prepare app for submission
 
@@ -173,17 +196,25 @@ This plan outlines the steps to build a native Swift app for iPhone and iPad Pro
 ## Technical Constraints Addressed
 
 - **No Xcode on VM:** Use Swift Package Manager for core logic, generate Xcode project with XcodeGen
-- **No real device during development:** Build mock MQTT server and use recorded test data
-- **iOS background limitations:** Design for foreground operation, plan for phase 2 logger
-- **Local Network permissions:** Implement `NSLocalNetworkUsageDescription` and `NSBonjourServices`
+- **No real device during development:** Build mock MQTT broker and use documented topic fixtures
+- **iOS background limitations:** Design for foreground operation only, no background logging
+- **Local Network permissions:** Implement `NSLocalNetworkUsageDescription` (no mDNS services)
+- **Read-only guarantee:** Architectural constraint enforced by tests, no W/ message publishing
 
 ## Success Criteria
 
 1. App successfully connects to Cerbo GX over LAN using MQTT
 2. Real-time data visualization works with native iOS gestures
-3. Historical data recording and charting functional
+3. Historical data fetch and charting functional
 4. iPad Pro layout with customizable dashboard implemented
 5. Alarms and notifications displayed correctly
 6. Demo mode works for App Store submission
-7. Test coverage >80% for critical components
-8. Performance meets iOS standards (60 FPS, <100MB memory)
+7. Read-only guarantee verified by tests
+8. Connection handling robust (timeouts, backoff caps)
+
+## Open Questions for the User
+
+1. Should the app integrate with VRM API for detailed history (requires internet)?
+2. MQTT library choice: own client on Network.framework vs CocoaMQTT?
+3. Should controls/writes (W/ topics) ever be implemented, or stay read-only?
+4. What minimum iOS version (iOS 17+ or older)?
