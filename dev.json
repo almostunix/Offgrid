@@ -12,7 +12,7 @@
     "CLAUDE.md"
   ],
   "tests": {
-    "command": "swift test",
+    "command": "swift test && if [ -f project.yml ]; then xcodegen generate --quiet && xcodebuild -project CerboApp.xcodeproj -scheme CerboApp -destination 'generic/platform=iOS Simulator' -derivedDataPath .dd build CODE_SIGNING_ALLOWED=NO -quiet; fi",
     "suites": [
       "all"
     ],
@@ -20,10 +20,12 @@
       "Package.swift",
       "Package.resolved",
       "Sources",
-      "Tests"
+      "Tests",
+      "App",
+      "project.yml"
     ],
-    "timeout": 600,
-    "description": "Build the VictronKit Swift package and run its tests (swift test) against the project plus your staged changes. Tests use the local simulator and fixtures only, never the real Cerbo."
+    "timeout": 900,
+    "description": "Build the VictronKit package and run its tests (swift test), then generate the Xcode project and build the iOS app for the Simulator (xcodebuild). Both must pass. Tests use the local Mosquitto test broker and fixtures only, never the real Cerbo."
   },
   "checks": [
     {
