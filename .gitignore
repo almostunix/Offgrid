@@ -1,3 +1,7 @@
 .dev_out/
 .DS_Store
 node_modules/
+.build/
+.swiftpm/
+*.xcodeproj/
+DerivedData/

@@ -1,0 +1,11 @@
+{
+  "writable": ["Package.swift", "Package.resolved", "Sources/", "Tests/", "App/", "project.yml"],
+  "readable": ["docs/", "CLAUDE.md"],
+  "tests": {
+    "command": "swift test",
+    "suites": ["all"],
+    "copy": ["Package.swift", "Package.resolved", "Sources", "Tests"],
+    "timeout": 600,
+    "description": "Build the VictronKit Swift package and run its tests (swift test) against the project plus your staged changes. Tests use the local simulator and fixtures only, never the real Cerbo."
+  }
+}
