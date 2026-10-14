@@ -7,7 +7,7 @@
 import Foundation
 
 /// Represents a saved Cerbo connection profile
-public struct ConnectionProfile: Codable, Equatable {
+public struct ConnectionProfile: Codable, Equatable, Identifiable {
     /// Unique identifier for the profile
     public let id: UUID
     

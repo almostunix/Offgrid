@@ -259,6 +259,7 @@ public final class ConnectionProfileStore: ConnectionProfileStoring {
         existingProfile.port = profile.port
         existingProfile.useTLS = profile.useTLS
         existingProfile.username = profile.username
+        existingProfile.portalId = profile.portalId
         existingProfile.lastUsed = profile.lastUsed
         
         try saveProfileToDisk(existingProfile)
