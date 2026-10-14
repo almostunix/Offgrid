@@ -3,9 +3,12 @@ import CocoaMQTT
 
 final class FixtureReplayer {
     private let broker: TestBroker
-    private let mqtt: CocoaMQTT
+    let mqtt: CocoaMQTT
     private let queue = DispatchQueue(label: "com.victron.fixture-replayer")
     private var fixtures: [(topic: String, payload: String)] = []
+    private var keepalives: [String] = []   // payloads of every keepalive received (only touched on `queue`)
+    /// Payloads of the keepalives received so far, in order.
+    var receivedKeepalives: [String] { queue.sync { keepalives } }
 
     init(broker: TestBroker) {
         self.broker = broker
@@ -85,6 +88,7 @@ final class FixtureReplayer {
     }
 
     private func handleKeepaliveMessage(topic: String, payload: String) {
+        keepalives.append(payload)
         // Parse keepalive options
         let (suppress, _) = FixtureReplayer.parseKeepaliveOptions(payload: payload)
         
