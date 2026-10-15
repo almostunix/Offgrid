@@ -285,9 +285,10 @@ struct AddEditProfileView: View {
 
     private func saveProfile() {
         let port = Int(portString) ?? 1883
+        let newProfile = ConnectionProfile(name: name, host: host, port: port, useTLS: useTLS, username: username.isEmpty ? nil : username)
         let profile = profile?.id == nil ? 
-            ConnectionProfile(name: name, host: host, port: port, useTLS: useTLS, username: username.isEmpty ? nil : username) :
-            ConnectionProfile(id: profile!.id, name: name, host: host, port: port, useTLS: useTLS, username: username.isEmpty ? nil : username, passwordKeychainReference: profile!.passwordKeychainReference, portalId: profile!.portalId, lastUsed: profile!.lastUsed, createdAt: profile!.createdAt, updatedAt: Date())
+            newProfile :
+            ConnectionProfile(id: profile!.id, name: name, host: host, port: port, useTLS: useTLS, username: username.isEmpty ? nil : username, passwordKeychainReference: profile!.passwordKeychainReference, portalId: profile!.portalId, lastUsed: profile!.lastUsed, createdAt: profile!.createdAt, updatedAt: Date(), pinnedCertificateSHA256: pinAfterEdit(old: profile!, new: newProfile))
         onSave(profile, password.isEmpty ? nil : password)
         isPresented = false
     }

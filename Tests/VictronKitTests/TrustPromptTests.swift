@@ -105,4 +105,124 @@ final class TrustPromptTests: XCTestCase {
         XCTAssert(plaintextPasswordWarning.contains("unencrypted"))
         XCTAssert(plaintextPasswordWarning.contains("TLS"))
     }
+
+    func testPinAfterEditSameHostPortTLS() {
+        let oldProfile = ConnectionProfile(
+            name: "Old Name",
+            host: "127.0.0.1",
+            port: 8883,
+            useTLS: true,
+            username: "test",
+            pinnedCertificateSHA256: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+        )
+        let newProfile = ConnectionProfile(
+            name: "New Name",
+            host: "127.0.0.1",
+            port: 8883,
+            useTLS: true,
+            username: "test"
+        )
+        let result = pinAfterEdit(old: oldProfile, new: newProfile)
+        XCTAssertEqual(result, "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2")
+    }
+
+    func testPinAfterEditChangedHost() {
+        let oldProfile = ConnectionProfile(
+            name: "Old Name",
+            host: "127.0.0.1",
+            port: 8883,
+            useTLS: true,
+            username: "test",
+            pinnedCertificateSHA256: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+        )
+        let newProfile = ConnectionProfile(
+            name: "New Name",
+            host: "192.168.1.1",
+            port: 8883,
+            useTLS: true,
+            username: "test"
+        )
+        let result = pinAfterEdit(old: oldProfile, new: newProfile)
+        XCTAssertNil(result)
+    }
+
+    func testPinAfterEditChangedPort() {
+        let oldProfile = ConnectionProfile(
+            name: "Old Name",
+            host: "127.0.0.1",
+            port: 8883,
+            useTLS: true,
+            username: "test",
+            pinnedCertificateSHA256: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+        )
+        let newProfile = ConnectionProfile(
+            name: "New Name",
+            host: "127.0.0.1",
+            port: 1883,
+            useTLS: true,
+            username: "test"
+        )
+        let result = pinAfterEdit(old: oldProfile, new: newProfile)
+        XCTAssertNil(result)
+    }
+
+    func testPinAfterEditChangedTLS() {
+        let oldProfile = ConnectionProfile(
+            name: "Old Name",
+            host: "127.0.0.1",
+            port: 8883,
+            useTLS: true,
+            username: "test",
+            pinnedCertificateSHA256: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+        )
+        let newProfile = ConnectionProfile(
+            name: "New Name",
+            host: "127.0.0.1",
+            port: 8883,
+            useTLS: false,
+            username: "test"
+        )
+        let result = pinAfterEdit(old: oldProfile, new: newProfile)
+        XCTAssertNil(result)
+    }
+
+    func testPinAfterEditNoExistingPin() {
+        let oldProfile = ConnectionProfile(
+            name: "Old Name",
+            host: "127.0.0.1",
+            port: 8883,
+            useTLS: true,
+            username: "test",
+            pinnedCertificateSHA256: nil
+        )
+        let newProfile = ConnectionProfile(
+            name: "New Name",
+            host: "127.0.0.1",
+            port: 8883,
+            useTLS: true,
+            username: "test"
+        )
+        let result = pinAfterEdit(old: oldProfile, new: newProfile)
+        XCTAssertNil(result)
+    }
+
+    func testPinAfterEditAllParametersChanged() {
+        let oldProfile = ConnectionProfile(
+            name: "Old Name",
+            host: "127.0.0.1",
+            port: 8883,
+            useTLS: true,
+            username: "test",
+            pinnedCertificateSHA256: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+        )
+        let newProfile = ConnectionProfile(
+            name: "New Name",
+            host: "192.168.1.1",
+            port: 1883,
+            useTLS: false,
+            username: "test"
+        )
+        let result = pinAfterEdit(old: oldProfile, new: newProfile)
+        XCTAssertNil(result)
+    }
 }

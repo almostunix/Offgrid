@@ -41,5 +41,19 @@ public func needsPlaintextPasswordWarning(for profile: ConnectionProfile, passwo
     return !profile.useTLS && !(password ?? "").isEmpty
 }
 
+/// Determines if the certificate pin should be preserved when editing a profile
+/// - Parameters:
+///   - old: The original connection profile
+///   - new: The updated connection profile
+/// - Returns: The pinned certificate SHA-256 if it should be preserved, nil otherwise
+public func pinAfterEdit(old: ConnectionProfile, new: ConnectionProfile) -> String? {
+    // Keep the existing pin only if host, port, and TLS settings haven't changed
+    if old.host == new.host && old.port == new.port && old.useTLS == new.useTLS {
+        return old.pinnedCertificateSHA256
+    }
+    // Clear the pin if any of the critical connection parameters changed
+    return nil
+}
+
 /// Warning message for plaintext password connections
 public let plaintextPasswordWarning = "Your password will be sent unencrypted. Anyone on this network could read it and use it to control your Cerbo. Switch the Cerbo to TLS (port 8883) if you can."
