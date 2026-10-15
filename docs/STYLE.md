@@ -1,27 +1,29 @@
 # Offgrid style guide: "Night" (direction B, chosen 2026-10-15)
 
-Dark, high-contrast and calm: a near-black ground, rounded tiles, big tabular numbers and exactly two accents. The reference mockup is direction B on the style canvas (live overview, iPhone 390×844). Dontonio said B "is definitely headed in the right direction", so details may still change; change this file first, then the code.
+Dark, high-contrast and calm: a near-black ground, rounded tiles or hairline-divided rows, big tabular numbers and one accent per energy source. Reference mockups: direction B on the first style canvas, and the refined Night screens (first screen/scan, overview, power flow) on the second. Dontonio said B "is definitely headed in the right direction", so details may still change; change this file first, then the code.
 
 ## Colors (`App/Theme/OffgridTheme.swift`)
 
 | Token | Hex | Use |
 |---|---|---|
-| `background` | `#0B0D10` | the screen ground |
-| `surface` | `#15181D` | tiles, cards, tab bar |
-| `surfaceRaised` | `#262A31` | selected tab, ring track, pressed states |
-| `textPrimary` | `#F4F5F7` | numbers, titles |
-| `textSecondary` | `#9AA0A8` | labels, units, captions (7:1 on `surface`) |
-| `solar` | `#F5B544` | everything solar: icon, chart line |
-| `battery` | `#3DD6B5` | battery ring, "Charging", battery chart |
+| `background` | `#0B0C0E` | the screen ground |
+| `surface` | `#141518` | tiles, cards, tab bar |
+| `surfaceRaised` | `#222328` | selected tab, ring track, pressed states |
+| `hairline` | `#222328` | 1 pt dividers between rows |
+| `textPrimary` | `#F4F4F5` | numbers, titles |
+| `textSecondary` | `#A1A1AA` | labels, units, captions |
+| `solar` | `#F5B945` | everything solar: icon, chart line, flow |
+| `battery` | `#34D399` | battery ring, "Charging", battery flow |
+| `grid` | `#93C5FD` | grid / generator input |
 | `warning` | `#FF9F43` | warnings (alarm level 1), plain-MQTT badge |
 | `alarm` | `#FF5C5C` | alarms (level 2), certificate changed |
 
-- Two accents only (solar, battery). Grid, loads and everything else are white or grey. Warnings and alarms differ in lightness as well as hue, and always come with an icon and a word.
+- One accent per energy source (solar, battery, grid); loads and everything else are white or grey. Warnings and alarms differ in lightness as well as hue, and always come with an icon and a word.
 - Dark only for now: set `.preferredColorScheme(.dark)` at the root.
 
 ## Type
 
-- Numbers: the system font, medium weight, `.monospacedDigit()`. Hero number 30 pt in the ring; tile values 30 pt with the unit at 16 pt in `textSecondary`. (The mockup uses Space Grotesk; bundling it means downloading the font file, so that waits for Dontonio's OK. Keep the font in one place in `OffgridTheme` so swapping it later is one line.)
+- Numbers: Apple's rounded system font (SF Pro Rounded, `.fontDesign(.rounded)`), medium weight, `.monospacedDigit()`. Hero number 30 pt in the ring; tile values 30 pt with the unit at 16 pt in `textSecondary`. No font download. Keep it in one place in `OffgridTheme`.
 - Text: the system font (SF Pro). Screen title 28 pt semibold; labels 13 pt `textSecondary`; body 15 to 17 pt.
 - Support Dynamic Type: scale with `@ScaledMetric`, and let tiles grow rather than truncate.
 
@@ -29,7 +31,7 @@ Dark, high-contrast and calm: a near-black ground, rounded tiles, big tabular nu
 
 - Corner radius: 24 (hero card), 20 (tiles, chart card), 16 (tab pills), 14 (icon buttons).
 - Screen padding 20; gap 12 between tiles, 16 between sections. Touch targets at least 44×44.
-- No borders, shadows or gradients: depth comes from `surface` on `background` only.
+- No borders, shadows or gradients: depth comes from `surface` on `background`. Lists use rows divided by a 1 pt `hairline`; summaries use tiles. Both are fine on one screen.
 
 ## Components (`App/Theme/`)
 
