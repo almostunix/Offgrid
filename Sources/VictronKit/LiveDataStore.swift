@@ -103,6 +103,29 @@ public struct InverterModel: Equatable {
     }
 }
 
+/// Represents a received MQTT topic with its raw value and timestamp
+public struct ReceivedTopic: Identifiable, Equatable {
+    /// Unique identifier
+    public let id: String
+    
+    /// The full MQTT topic
+    public let topic: String
+    
+    /// The raw payload value as string
+    public let rawValue: String
+    
+    /// The timestamp when the topic was last updated
+    public let timestamp: Date
+    
+    /// Initialize a new ReceivedTopic
+    public init(topic: String, rawValue: String, timestamp: Date) {
+        self.id = topic
+        self.topic = topic
+        self.rawValue = rawValue
+        self.timestamp = timestamp
+    }
+}
+
 /// Stores parsed MQTT messages and provides typed device models
 public final class LiveDataStore: ObservableObject {
     /// The detected portal ID
@@ -135,6 +158,13 @@ public final class LiveDataStore: ObservableObject {
     
     /// Inverter models by device ID
     public private(set) var inverters: [String: InverterModel] = [:] {
+        didSet {
+            objectWillChange.send()
+        }
+    }
+    
+    /// All received topics with their raw values and timestamps
+    public private(set) var receivedTopics: [ReceivedTopic] = [] {
         didSet {
             objectWillChange.send()
         }
@@ -198,6 +228,9 @@ public final class LiveDataStore: ObservableObject {
                 return
             }
             
+            // Track the received topic
+            trackReceivedTopic(topic: topic, payload: jsonDict)
+            
             update(with: message)
         } catch {
             // Malformed JSON is ignored
@@ -205,9 +238,45 @@ public final class LiveDataStore: ObservableObject {
         }
     }
     
+    /// Track a received topic with its raw value
+    /// - Parameters:
+    ///   - topic: The MQTT topic
+    ///   - payload: The raw payload dictionary
+    private func trackReceivedTopic(topic: String, payload: [String: Any]) {
+        // Convert payload to string representation
+        let rawValue: String
+        if let value = payload["value"] {
+            if let numberValue = value as? NSNumber {
+                // Handle numbers without .0 for integers
+                if numberValue.isEqual(to: numberValue.intValue as NSNumber) {
+                    rawValue = "\(numberValue.intValue)"
+                } else {
+                    rawValue = "\(numberValue)"
+                }
+            } else {
+                rawValue = "\(value)"
+            }
+        } else {
+            rawValue = "{}"
+        }
+        
+        let receivedTopic = ReceivedTopic(topic: topic, rawValue: rawValue, timestamp: Date())
+        
+        // Update or add the topic
+        if let index = receivedTopics.firstIndex(where: { $0.topic == topic }) {
+            receivedTopics[index] = receivedTopic
+        } else {
+            receivedTopics.append(receivedTopic)
+        }
+    }
+    
     /// Update the store with a parsed message
     /// - Parameter message: The parsed MQTT message
     public func update(with message: ParsedMessage) {
+        // Track the received topic
+        trackReceivedTopic(topic: "N/\(message.topic.portalId)/\(message.topic.service)/\(message.topic.instance)/\(message.topic.path.joined(separator: "/"))", 
+                          payload: message.rawPayload)
+        
         // Update portal ID if not already set
         if portalId == nil {
             portalId = message.topic.portalId

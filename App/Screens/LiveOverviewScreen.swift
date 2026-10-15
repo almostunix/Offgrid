@@ -56,6 +56,16 @@ public struct LiveOverviewScreen: View {
                         .shadow(radius: 3)
                         .padding(.horizontal)
                 }
+                
+                // Topic Explorer Section
+                NavigationLink(destination: TopicExplorerScreen(store: store)) {
+                    TopicExplorerPreview(store: store)
+                        .padding()
+                        .background(.regularMaterial)
+                        .cornerRadius(16)
+                        .shadow(radius: 3)
+                        .padding(.horizontal)
+                }
             }
             .padding(.vertical)
         }
@@ -363,6 +373,41 @@ private struct DeviceStateItemView: View {
             return Color.white
         case .lowPower, .passthru, .storage, .equalize, .unknown:
             return Color.primary
+        }
+    }
+}
+
+/// Topic explorer preview showing a summary of received topics
+private struct TopicExplorerPreview: View {
+    @ObservedObject var store: LiveDataStore
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Topic Explorer")
+                .font(.headline)
+            
+            // Show first few topics
+            ForEach(Array(store.receivedTopics.prefix(3)), id: \.id) { topic in
+                HStack {
+                    Text(topic.topic)
+                        .font(.subheadline)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                    
+                    Text(topic.rawValue)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            }
+            
+            if store.receivedTopics.count > 3 {
+                Text("+" + String(store.receivedTopics.count - 3) + " more topics")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
         }
     }
 }
