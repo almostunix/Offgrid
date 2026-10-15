@@ -49,7 +49,7 @@ public final class SolarDayRecord {
 /// Persistent cache for history data using SwiftData
 private let historyCacheLog = Logger(subsystem: "com.almostunix.cerbo", category: "HistoryCache")
 
-public final class HistoryCache {
+public final class HistoryCache: ObservableObject {
     private let container: ModelContainer
     private let context: ModelContext
 
@@ -117,8 +117,28 @@ public final class HistoryCache {
         // Save changes
         do {
             try context.save()
+            objectWillChange.send()
         } catch {
             historyCacheLog.error("Error saving context: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Get all distinct instance IDs for a given portal
+    /// - Parameter portalId: The portal ID
+    /// - Returns: Array of distinct instance IDs sorted alphabetically
+    public func instances(portalId: String) -> [String] {
+        let predicate = #Predicate<SolarDayRecord> { record in
+            record.portalId == portalId
+        }
+
+        let descriptor = FetchDescriptor<SolarDayRecord>(predicate: predicate)
+        do {
+            let records = try context.fetch(descriptor)
+            let instances = Set(records.map { $0.instance })
+            return instances.sorted()
+        } catch {
+            historyCacheLog.error("Error fetching instances: \(error.localizedDescription, privacy: .public)")
+            return []
         }
     }
 

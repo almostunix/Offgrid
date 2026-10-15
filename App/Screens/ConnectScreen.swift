@@ -11,7 +11,7 @@ struct ConnectScreen: View {
         NavigationStack {
             Group {
                 if viewModel.connectionState == .connected {
-                    LiveOverviewScreen(store: viewModel.liveDataStore, recorder: viewModel.liveSeriesRecorder, isDemo: viewModel.isDemo, onStopDemo: { viewModel.stopDemo() })
+                    LiveOverviewScreen(store: viewModel.liveDataStore, recorder: viewModel.liveSeriesRecorder, historyCache: viewModel.isDemo ? viewModel.demoHistoryCache : viewModel.historyCache, isDemo: viewModel.isDemo, portalId: viewModel.portalId, onStopDemo: { viewModel.stopDemo() })
                 } else {
                     List {
                         // Connection status
@@ -274,10 +274,16 @@ class ConnectViewModel: ObservableObject {
     let liveDataStore = LiveDataStore()
     /// Records live values for the charts from connect time on (one per connection view model, not per screen).
     lazy var liveSeriesRecorder = LiveSeriesRecorder(store: liveDataStore)
+    /// History cache for persistent storage of history data
+    let historyCache = HistoryCache()
+    /// Demo history cache (in-memory only)
+    let demoHistoryCache = HistoryCache(inMemory: true)
 
     private var connectionManager: ConnectionManager?
     private var profileStore: ConnectionProfileStoring
     private var demoPlayer: DemoPlayer?
+    private var demoHistoryStore: HistoryStore?
+    private var historySaveWork: DispatchWorkItem?
 
     init() {
         do {
@@ -376,7 +382,9 @@ class ConnectViewModel: ObservableObject {
     func startDemo() {
         stopDemo()
         
-        demoPlayer = DemoPlayer(store: liveDataStore)
+        // Create a history store for demo mode
+        demoHistoryStore = HistoryStore()
+        demoPlayer = DemoPlayer(store: liveDataStore, historyStore: demoHistoryStore)
         
         // Load demo recordings from bundle
         let recordingNames = ["system", "battery", "solarcharger", "vebus", "full_publish_completed", "solarcharger_history", "battery_history", "alarms"]
@@ -395,6 +403,11 @@ class ConnectViewModel: ObservableObject {
             isDemo = true
             connectionState = .connected
             portalId = "c0ffee000001" // Demo portal ID
+            
+            // Store demo history in the demo cache (in-memory only)
+            if let store = self.demoHistoryStore, let portalId = self.portalId {
+                self.demoHistoryCache.store(store, portalId: portalId, fetchedAt: Date())
+            }
         } catch {
             print("Failed to start demo: " + error.localizedDescription)
         }
@@ -403,6 +416,7 @@ class ConnectViewModel: ObservableObject {
     func stopDemo() {
         demoPlayer?.stop()
         demoPlayer = nil
+        demoHistoryStore = nil
         isDemo = false
         connectionState = .idle
         portalId = nil
@@ -418,6 +432,25 @@ class ConnectViewModel: ObservableObject {
         connectionManager?.onPortalIdDetected = { [weak self] portalId in
             DispatchQueue.main.async {
                 self?.portalId = portalId
+            }
+        }
+        
+        connectionManager?.onMessage = { [weak self] topic in
+            // Check if this is a history message
+            if topic.contains("/History/") {
+                // Cancel any pending save
+                self?.historySaveWork?.cancel()
+                
+                // Schedule a debounced save on main thread
+                let workItem = DispatchWorkItem { [weak self] in
+                    if let store = self?.connectionManager?.historyStore, 
+                       let portalId = self?.portalId {
+                        self?.historyCache.store(store, portalId: portalId, fetchedAt: Date())
+                    }
+                }
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
+                self?.historySaveWork = workItem
             }
         }
     }

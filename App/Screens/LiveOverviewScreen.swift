@@ -16,17 +16,25 @@ public struct LiveOverviewScreen: View {
     /// Records live values for the charts; shared with the connection so history survives navigation.
     public let recorder: LiveSeriesRecorder
     
+    /// History cache for energy history
+    @ObservedObject public var historyCache: HistoryCache
+    
     /// Whether demo mode is active
     public var isDemo: Bool = false
+    
+    /// The portal ID for filtering data
+    public var portalId: String?
     
     /// Action to stop demo mode
     public var onStopDemo: (() -> Void)?
 
     // Initialize with data store (previews may omit the recorder)
-    public init(store: LiveDataStore, recorder: LiveSeriesRecorder? = nil, isDemo: Bool = false, onStopDemo: (() -> Void)? = nil) {
+    public init(store: LiveDataStore, recorder: LiveSeriesRecorder? = nil, historyCache: HistoryCache? = nil, isDemo: Bool = false, portalId: String? = nil, onStopDemo: (() -> Void)? = nil) {
         self.store = store
         self.recorder = recorder ?? LiveSeriesRecorder(store: store)
+        self.historyCache = historyCache ?? HistoryCache(inMemory: true)
         self.isDemo = isDemo
+        self.portalId = portalId
         self.onStopDemo = onStopDemo
     }
     
@@ -101,6 +109,16 @@ public struct LiveOverviewScreen: View {
                 // Live Charts Section
                 NavigationLink(destination: LiveChartsScreen(store: store, recorder: recorder)) {
                     LiveChartsPreview(store: store)
+                        .padding()
+                        .background(.regularMaterial)
+                        .cornerRadius(16)
+                        .shadow(radius: 3)
+                        .padding(.horizontal)
+                }
+                
+                // Energy History Section
+                NavigationLink(destination: EnergyHistoryScreen(historyCache: historyCache, isDemo: isDemo, portalId: portalId)) {
+                    EnergyHistoryPreview()
                         .padding()
                         .background(.regularMaterial)
                         .cornerRadius(16)
@@ -589,6 +607,30 @@ public struct LiveChartsPreview: View {
                     }
                 }
             }
+        }
+    }
+}
+
+/// Energy history preview showing a summary
+public struct EnergyHistoryPreview: View {
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Energy History")
+                .font(.headline)
+            
+            Text("View daily solar yield over time")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            
+            // Placeholder for chart preview
+            Rectangle()
+                .fill(Color.yellow.opacity(0.3))
+                .frame(height: 100)
+                .cornerRadius(8)
+                .overlay(
+                    Image(systemName: "chartbar")
+                        .foregroundStyle(.yellow)
+                )
         }
     }
 }
