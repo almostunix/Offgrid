@@ -175,4 +175,76 @@ final class DemoPlayerTests: XCTestCase {
         XCTAssertEqual(store.inverters.count, 1)
         XCTAssertNotNil(store.system.serial)
     }
+    
+    func testDemoFilesCanBeLoadedFromBundle() throws {
+        // Test that demo files can be loaded from the bundle
+        let recordingNames = ["system", "battery", "solarcharger", "vebus", "full_publish_completed", "solarcharger_history", "battery_history", "alarms"]
+        
+        for name in recordingNames {
+            let url = Bundle.module.url(forResource: name, withExtension: "json", subdirectory: "Fixtures")
+            XCTAssertNotNil(url, "Could not find demo fixture file: \(name).json")
+            
+            guard let url = url else { continue }
+            
+            let data = try Data(contentsOf: url)
+            XCTAssertNotNil(data, "Could not load data from file: \"(name).json\"")
+            
+            // Verify it can be parsed as a Recording
+            let recording = Recording(data: data)
+            XCTAssertNotNil(recording, "Could not parse recording from file: \"(name).json\"")
+            
+            guard let recording = recording else { continue }
+            
+            // Verify portal ID
+            XCTAssertEqual(recording.portalId, "c0ffee000001")
+            
+            // Verify messages are present
+            XCTAssertGreaterThan(recording.messages.count, 0, "Recording should have messages")
+        }
+    }
+    
+    func testDemoPlayerWithAllDemoFiles() throws {
+        // Load all demo files
+        let recordingNames = ["system", "battery", "solarcharger", "vebus", "full_publish_completed", "solarcharger_history", "battery_history", "alarms"]
+        
+        var recordings: [Data] = []
+        for name in recordingNames {
+            let url = try XCTUnwrap(Bundle.module.url(forResource: name, withExtension: "json", subdirectory: "Fixtures"))
+            let data = try Data(contentsOf: url)
+            recordings.append(data)
+        }
+        
+        let player = DemoPlayer(store: store, historyStore: historyStore, interval: 0.05, queue: queue)
+        try player.load(recordings)
+        player.start()
+        
+        // Wait for all data to be loaded
+        waitUntil("all demo data loaded") {
+            self.store.batteries.count >= 1 && 
+            self.store.solarChargers.count >= 1 && 
+            self.store.inverters.count >= 1 &&
+            self.store.system.serial != nil &&
+            !self.store.alarmStore.active.isEmpty
+        }
+        
+        // Verify all data is present
+        XCTAssertEqual(store.batteries.count, 1)
+        XCTAssertEqual(store.solarChargers.count, 1)
+        XCTAssertEqual(store.inverters.count, 1)
+        XCTAssertNotNil(store.system.serial)
+        XCTAssertGreaterThan(store.alarmStore.active.count, 0, "Should have active alarms")
+        
+        // Verify specific values
+        let battery = store.batteries["279"]
+        XCTAssertNotNil(battery)
+        XCTAssertEqual(battery?.productName, "Victron SmartShunt 500A")
+        
+        let solarCharger = store.solarChargers["278"]
+        XCTAssertNotNil(solarCharger)
+        XCTAssertEqual(solarCharger?.productName, "MPPT 150/70")
+        
+        let inverter = store.inverters["276"]
+        XCTAssertNotNil(inverter)
+        XCTAssertEqual(inverter?.productName, "MultiPlus-II 48/5000")
+    }
 }

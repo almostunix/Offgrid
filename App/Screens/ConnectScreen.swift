@@ -11,7 +11,7 @@ struct ConnectScreen: View {
         NavigationStack {
             Group {
                 if viewModel.connectionState == .connected {
-                    LiveOverviewScreen(store: viewModel.liveDataStore, recorder: viewModel.liveSeriesRecorder)
+                    LiveOverviewScreen(store: viewModel.liveDataStore, recorder: viewModel.liveSeriesRecorder, isDemo: viewModel.isDemo, onStopDemo: { viewModel.stopDemo() })
                 } else {
                     List {
                         // Connection status
@@ -91,6 +91,16 @@ struct ConnectScreen: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 TextField("Username", text: $viewModel.username)
                                 SecureField("Password", text: $viewModel.password)
+                            }
+                        }
+
+                        // Demo mode
+                        Section {
+                            Button(action: { viewModel.startDemo() }) {
+                                HStack {
+                                    Image(systemName: "play.circle.fill")
+                                    Text("Try demo mode")
+                                }
                             }
                         }
                     }
@@ -258,6 +268,7 @@ class ConnectViewModel: ObservableObject {
     @Published var username: String = ""
     @Published var password: String = ""
     @Published var connectedProfile: ConnectionProfile?
+    @Published var isDemo = false
 
     /// Live data store for the connected Cerbo GX
     let liveDataStore = LiveDataStore()
@@ -266,6 +277,7 @@ class ConnectViewModel: ObservableObject {
 
     private var connectionManager: ConnectionManager?
     private var profileStore: ConnectionProfileStoring
+    private var demoPlayer: DemoPlayer?
 
     init() {
         do {
@@ -359,6 +371,41 @@ class ConnectViewModel: ObservableObject {
         connectionState = .idle
         portalId = nil
         connectedProfile = nil
+    }
+
+    func startDemo() {
+        stopDemo()
+        
+        demoPlayer = DemoPlayer(store: liveDataStore)
+        
+        // Load demo recordings from bundle
+        let recordingNames = ["system", "battery", "solarcharger", "vebus", "full_publish_completed", "solarcharger_history", "battery_history", "alarms"]
+        var recordings: [Data] = []
+        
+        for name in recordingNames {
+            if let url = Bundle.main.url(forResource: name, withExtension: "json"),
+               let data = try? Data(contentsOf: url) {
+                recordings.append(data)
+            }
+        }
+        
+        do {
+            try demoPlayer?.load(recordings)
+            demoPlayer?.start()
+            isDemo = true
+            connectionState = .connected
+            portalId = "c0ffee000001" // Demo portal ID
+        } catch {
+            print("Failed to start demo: " + error.localizedDescription)
+        }
+    }
+
+    func stopDemo() {
+        demoPlayer?.stop()
+        demoPlayer = nil
+        isDemo = false
+        connectionState = .idle
+        portalId = nil
     }
 
     private func setupConnectionManagerCallbacks() {

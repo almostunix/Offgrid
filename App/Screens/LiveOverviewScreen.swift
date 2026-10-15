@@ -15,11 +15,19 @@ public struct LiveOverviewScreen: View {
     
     /// Records live values for the charts; shared with the connection so history survives navigation.
     public let recorder: LiveSeriesRecorder
+    
+    /// Whether demo mode is active
+    public var isDemo: Bool = false
+    
+    /// Action to stop demo mode
+    public var onStopDemo: (() -> Void)?
 
     // Initialize with data store (previews may omit the recorder)
-    public init(store: LiveDataStore, recorder: LiveSeriesRecorder? = nil) {
+    public init(store: LiveDataStore, recorder: LiveSeriesRecorder? = nil, isDemo: Bool = false, onStopDemo: (() -> Void)? = nil) {
         self.store = store
         self.recorder = recorder ?? LiveSeriesRecorder(store: store)
+        self.isDemo = isDemo
+        self.onStopDemo = onStopDemo
     }
     
     public var body: some View {
@@ -104,6 +112,24 @@ public struct LiveOverviewScreen: View {
         }
         .navigationTitle("Live Overview")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isDemo {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: { onStopDemo?() }) {
+                        Text("Stop demo")
+                    }
+                }
+                
+                ToolbarItem(placement: .navigation) {
+                    Text("Demo")
+                        .font(.caption)
+                        .padding(4)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(6)
+                }
+            }
+        }
     }
 }
 
