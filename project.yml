@@ -1,5 +1,5 @@
-# XcodeGen project for the Cerbo app (T-19). Generate with `xcodegen generate`; the .xcodeproj is not committed.
-name: CerboApp
+# XcodeGen project for Offgrid (T-19). Generate with `xcodegen generate`; the .xcodeproj is not committed.
+name: Offgrid
 options:
   bundleIdPrefix: com.almostunix
   deploymentTarget:
@@ -14,7 +14,7 @@ settings:
     MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: "1"
 targets:
-  CerboApp:
+  Offgrid:
     type: application
     platform: iOS
     sources:
@@ -25,14 +25,14 @@ targets:
         product: VictronKit
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.almostunix.cerbo
+        PRODUCT_BUNDLE_IDENTIFIER: com.almostunix.offgrid
     info:
       path: App/Info.plist
       properties:
-        CFBundleDisplayName: Cerbo
+        CFBundleDisplayName: Offgrid
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
-        NSLocalNetworkUsageDescription: "Cerbo connects to your Victron Cerbo GX on your local network to show live data."
+        NSLocalNetworkUsageDescription: "Offgrid connects to your Victron Cerbo GX on your local network to show live data."
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]

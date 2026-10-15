@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct CerboApp: App {
+struct OffgridApp: App {
     var body: some Scene {
         WindowGroup {
             ConnectScreen()

@@ -13,8 +13,8 @@ public final class KeychainService: SecretStore {
     private let service: String
     
     /// Initialize the Keychain service
-    /// - Parameter service: Service identifier (default: "com.almostunix.cerbo-app")
-    public init(service: String = "com.almostunix.cerbo-app") {
+    /// - Parameter service: Service identifier (default: "com.almostunix.offgrid")
+    public init(service: String = "com.almostunix.offgrid") {
         self.service = service
     }
     

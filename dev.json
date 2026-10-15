@@ -12,7 +12,7 @@
     "CLAUDE.md"
   ],
   "tests": {
-    "command": "swift test && if [ -f project.yml ]; then xcodegen generate --quiet && xcodebuild -project CerboApp.xcodeproj -scheme CerboApp -destination 'generic/platform=iOS Simulator' -derivedDataPath .dd build CODE_SIGNING_ALLOWED=NO -quiet; fi",
+    "command": "swift test && if [ -f project.yml ]; then xcodegen generate --quiet && xcodebuild -project Offgrid.xcodeproj -scheme Offgrid -destination 'generic/platform=iOS Simulator' -derivedDataPath .dd build CODE_SIGNING_ALLOWED=NO -quiet; fi",
     "suites": [
       "all"
     ],

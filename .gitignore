@@ -6,3 +6,8 @@ node_modules/
 *.xcodeproj/
 DerivedData/
 .dd/
+
+# local-only notes and logs
+CLAUDE.local.md
+*.log
+*.xcuserstate

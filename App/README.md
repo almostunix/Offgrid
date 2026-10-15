@@ -1,10 +1,10 @@
-# Cerbo App - Connect Screen
+# Offgrid app target
 
-This directory contains the SwiftUI application for the Cerbo GX connection management.
+This directory holds the SwiftUI screens of the Offgrid app. The logic lives in the VictronKit library (`Sources/VictronKit`).
 
 ## Project Structure
 
-- **CerboApp.swift**: Main app entry point
+- **OffgridApp.swift**: Main app entry point
 - **AppDelegate.swift**: UIApplication delegate
 - **SceneDelegate.swift**: UIWindowScene delegate
 - **Screens/ConnectScreen.swift**: Main connection screen with:

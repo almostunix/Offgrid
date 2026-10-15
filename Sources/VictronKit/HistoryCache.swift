@@ -47,7 +47,7 @@ public final class SolarDayRecord {
 }
 
 /// Persistent cache for history data using SwiftData
-private let historyCacheLog = Logger(subsystem: "com.almostunix.cerbo", category: "HistoryCache")
+private let historyCacheLog = Logger(subsystem: "com.almostunix.offgrid", category: "HistoryCache")
 
 public final class HistoryCache: ObservableObject {
     private let container: ModelContainer

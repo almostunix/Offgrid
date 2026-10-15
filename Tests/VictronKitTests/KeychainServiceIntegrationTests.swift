@@ -9,7 +9,7 @@ import XCTest
 
 final class KeychainServiceIntegrationTests: XCTestCase {
     var keychainService: KeychainService!
-    let testServiceName = "com.almostunix.cerbo-app.test"
+    let testServiceName = "com.almostunix.offgrid.test"
     
     override func setUp() {
         keychainService = KeychainService(service: testServiceName)

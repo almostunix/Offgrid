@@ -44,7 +44,7 @@ public struct AlarmState: Identifiable, Equatable {
 public final class AlarmStore: ObservableObject {
     private let topicParser = TopicParser()
     private let now: () -> Date
-    private let logger = Logger(subsystem: "com.almostunix.cerbo", category: "AlarmStore")
+    private let logger = Logger(subsystem: "com.almostunix.offgrid", category: "AlarmStore")
 
     public private(set) var alarms: [String: AlarmState] = [:]
     public private(set) var log: [AlarmState] = []
