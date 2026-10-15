@@ -30,12 +30,14 @@ public struct LiveOverviewScreen: View {
                     .padding(.horizontal)
                 
                 // Power Flow Section
-                PowerFlowView(store: store)
-                    .padding()
-                    .background(.regularMaterial)
-                    .cornerRadius(16)
-                    .shadow(radius: 3)
-                    .padding(.horizontal)
+                NavigationLink(destination: PowerFlowScreen(store: store)) {
+                    PowerFlowView(store: store)
+                        .padding()
+                        .background(.regularMaterial)
+                        .cornerRadius(16)
+                        .shadow(radius: 3)
+                        .padding(.horizontal)
+                }
                 
                 // Device States Section
                 DeviceStatesView(store: store)
