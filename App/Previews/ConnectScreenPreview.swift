@@ -29,7 +29,7 @@ struct ConnectionStatusPreview: View {
 struct AddEditProfilePreview: View {
     var body: some View {
         NavigationStack {
-            AddEditProfileView(isPresented: .constant(true), profile: nil, onSave: { _ in })
+            AddEditProfileView(isPresented: .constant(true), profile: nil, onSave: { _, _ in })
         }
         .previewLayout(.sizeThatFits)
         .previewDisplayName("Add Profile")
@@ -46,7 +46,7 @@ struct EditProfilePreview: View {
             username: "admin"
         )
         NavigationStack {
-            AddEditProfileView(isPresented: .constant(true), profile: profile, onSave: { _ in })
+            AddEditProfileView(isPresented: .constant(true), profile: profile, onSave: { _, _ in })
         }
         .previewLayout(.sizeThatFits)
         .previewDisplayName("Edit Profile")

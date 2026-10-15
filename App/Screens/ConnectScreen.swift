@@ -115,13 +115,13 @@ struct ConnectScreen: View {
             }
             .navigationTitle("Cerbo Connection")
             .sheet(isPresented: $showingAddProfile) {
-                AddEditProfileView(isPresented: $showingAddProfile, profile: nil, onSave: { profile in
-                    viewModel.saveProfile(profile)
+                AddEditProfileView(isPresented: $showingAddProfile, profile: nil, onSave: { profile, password in
+                    viewModel.saveProfile(profile, password: password)
                 })
             }
             .sheet(item: $selectedProfile) { profile in
-                AddEditProfileView(isPresented: .constant(false), profile: profile, onSave: { updatedProfile in
-                    viewModel.updateProfile(updatedProfile)
+                AddEditProfileView(isPresented: .constant(false), profile: profile, onSave: { updatedProfile, password in
+                    viewModel.updateProfile(updatedProfile, password: password)
                     selectedProfile = nil
                 })
             }
@@ -231,7 +231,7 @@ struct ConnectionStatusView: View {
 struct AddEditProfileView: View {
     @Binding var isPresented: Bool
     let profile: ConnectionProfile?
-    let onSave: (ConnectionProfile) -> Void
+    let onSave: (ConnectionProfile, String?) -> Void
 
     @State private var name: String = ""
     @State private var host: String = ""
@@ -253,7 +253,7 @@ struct AddEditProfileView: View {
 
                 Section(header: Text("Credentials")) {
                     TextField("Username", text: $username)
-                    SecureField("Password", text: $password)
+                    SecureField(profile?.passwordKeychainReference != nil ? "Password saved" : "Password", text: $password)
                 }
             }
             .navigationTitle(profile == nil ? "Add Connection" : "Edit Connection")
@@ -288,7 +288,7 @@ struct AddEditProfileView: View {
         let profile = profile?.id == nil ? 
             ConnectionProfile(name: name, host: host, port: port, useTLS: useTLS, username: username.isEmpty ? nil : username) :
             ConnectionProfile(id: profile!.id, name: name, host: host, port: port, useTLS: useTLS, username: username.isEmpty ? nil : username, passwordKeychainReference: profile!.passwordKeychainReference, portalId: profile!.portalId, lastUsed: profile!.lastUsed, createdAt: profile!.createdAt, updatedAt: Date())
-        onSave(profile)
+        onSave(profile, password.isEmpty ? nil : password)
         isPresented = false
     }
 }
@@ -351,18 +351,18 @@ class ConnectViewModel: ObservableObject {
         }
     }
 
-    func saveProfile(_ profile: ConnectionProfile) {
+    func saveProfile(_ profile: ConnectionProfile, password: String?) {
         do {
-            try profileStore.save(profile, password: password.isEmpty ? nil : password)
+            try profileStore.save(profile, password: password)
             loadProfiles()
         } catch {
             print("Failed to save profile: " + error.localizedDescription)
         }
     }
 
-    func updateProfile(_ profile: ConnectionProfile) {
+    func updateProfile(_ profile: ConnectionProfile, password: String?) {
         do {
-            try profileStore.updateProfile(profile, password: password.isEmpty ? nil : password)
+            try profileStore.updateProfile(profile, password: password)
             loadProfiles()
         } catch {
             print("Failed to update profile: " + error.localizedDescription)
