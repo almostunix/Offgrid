@@ -44,6 +44,16 @@ public struct LiveOverviewScreen: View {
                     .cornerRadius(16)
                     .shadow(radius: 3)
                     .padding(.horizontal)
+                
+                // Devices Section
+                NavigationLink(destination: DeviceListScreen(store: store)) {
+                    DeviceListPreview(store: store)
+                        .padding()
+                        .background(.regularMaterial)
+                        .cornerRadius(16)
+                        .shadow(radius: 3)
+                        .padding(.horizontal)
+                }
             }
             .padding(.vertical)
         }
@@ -207,6 +217,60 @@ private struct PowerItemView: View {
             return color.opacity(0.7)
         } else {
             return .secondary
+        }
+    }
+}
+
+/// Device list preview showing a summary of connected devices
+private struct DeviceListPreview: View {
+    @ObservedObject var store: LiveDataStore
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Devices")
+                .font(.headline)
+            
+            // Show first few devices
+            ForEach(Array(DeviceListModel.rows(from: store).prefix(3)), id: \.id) { device in
+                HStack {
+                    Image(systemName: deviceIcon(for: device.type))
+                        .font(.subheadline)
+                        .foregroundStyle(deviceColor(for: device.type))
+                    
+                    Text(device.productName ?? "Unknown Device")
+                        .font(.subheadline)
+                    
+                    Spacer()
+                    
+                    StatusIndicator(status: device.status)
+                }
+                .padding(.vertical, 4)
+            }
+            
+            if DeviceListModel.rows(from: store).count > 3 {
+                Text("\\(\"+\" + String(DeviceListModel.rows(from: store).count - 3) + \" more devices\")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+    }
+    
+    /// Get icon for device type
+    private func deviceIcon(for type: DeviceType) -> String {
+        switch type {
+        case .battery: return "battery.100"
+        case .solarCharger: return "sun.max"
+        case .inverter: return "poweroutlet.type.f"
+        }
+    }
+    
+    /// Get color for device type
+    private func deviceColor(for type: DeviceType) -> Color {
+        switch type {
+        case .battery: return .blue
+        case .solarCharger: return .yellow
+        case .inverter: return .green
         }
     }
 }
