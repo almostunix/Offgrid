@@ -1,0 +1,13 @@
+{
+  "portalId": "c0ffee000001",
+  "messages": [
+    {"topic": "N/c0ffee000001/battery/279/History/ChargeCycles", "payload": {"value": 125}},
+    {"topic": "N/c0ffee000001/battery/279/History/DeepestDischarge", "payload": {"value": 22.5}},
+    {"topic": "N/c0ffee000001/battery/279/History/AverageDischarge", "payload": {"value": 15.3}},
+    {"topic": "N/c0ffee000001/battery/279/History/DischargedEnergy", "payload": {"value": 45000}},
+    {"topic": "N/c0ffee000001/battery/279/History/ChargedEnergy", "payload": {"value": 52000}},
+    {"topic": "N/c0ffee000001/battery/279/History/TotalAhDrawn", "payload": {"value": 1850}},
+    {"topic": "N/c0ffee000001/battery/279/History/MinimumVoltage", "payload": {"value": 11.8}},
+    {"topic": "N/c0ffee000001/battery/279/History/MaximumVoltage", "payload": {"value": 14.6}}
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "portalId": "c0ffee000001",
+  "messages": [
+    {"topic": "N/c0ffee000001/full_publish_completed", "payload": {"value": 1702459522}}
+  ]
+}

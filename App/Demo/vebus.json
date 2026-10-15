@@ -1,0 +1,10 @@
+{
+  "portalId": "c0ffee000001",
+  "messages": [
+    {"topic": "N/c0ffee000001/vebus/276/ProductName", "payload": {"value": "MultiPlus-II 48/5000"}},
+    {"topic": "N/c0ffee000001/vebus/276/Ac/ActiveIn/L1/P", "payload": {"value": 1200}},
+    {"topic": "N/c0ffee000001/vebus/276/Ac/Out/L1/P", "payload": {"value": 851}},
+    {"topic": "N/c0ffee000001/vebus/276/Mode", "payload": {"value": 3}},
+    {"topic": "N/c0ffee000001/vebus/276/State", "payload": {"value": 2}}
+  ]
+}

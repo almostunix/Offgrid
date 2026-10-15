@@ -1,0 +1,15 @@
+{
+  "portalId": "c0ffee000001",
+  "messages": [
+    {"topic": "N/c0ffee000001/battery/279/Alarms/LowVoltage", "payload": {"value": 0}},
+    {"topic": "N/c0ffee000001/battery/279/Alarms/HighVoltage", "payload": {"value": 0}},
+    {"topic": "N/c0ffee000001/battery/279/Alarms/LowSoc", "payload": {"value": 1}},
+    {"topic": "N/c0ffee000001/battery/279/Alarms/HighTemperature", "payload": {"value": 0}},
+    {"topic": "N/c0ffee000001/battery/279/Alarms/Alarm", "payload": {"value": 2}},
+    {"topic": "N/c0ffee000001/vebus/276/Alarms/LowBattery", "payload": {"value": 0}},
+    {"topic": "N/c0ffee000001/vebus/276/Alarms/HighDcVoltage", "payload": {"value": 0}},
+    {"topic": "N/c0ffee000001/vebus/276/Alarms/L1/Overload", "payload": {"value": 2}},
+    {"topic": "N/c0ffee000001/vebus/276/Alarms/L1/HighTemperature", "payload": {"value": 1}},
+    {"topic": "N/c0ffee000001/vebus/276/Alarms/L1/Ripple", "payload": {"value": null}}
+  ]
+}

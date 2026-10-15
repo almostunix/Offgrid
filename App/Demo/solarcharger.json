@@ -1,0 +1,11 @@
+{
+  "portalId": "c0ffee000001",
+  "messages": [
+    {"topic": "N/c0ffee000001/solarcharger/278/ProductName", "payload": {"value": "MPPT 150/70"}},
+    {"topic": "N/c0ffee000001/solarcharger/278/Pv/V", "payload": {"value": 24.5}},
+    {"topic": "N/c0ffee000001/solarcharger/278/Yield/Power", "payload": {"value": 150}},
+    {"topic": "N/c0ffee000001/solarcharger/278/Dc/0/Voltage", "payload": {"value": 13.2}},
+    {"topic": "N/c0ffee000001/solarcharger/278/Dc/0/Current", "payload": {"value": 11.5}},
+    {"topic": "N/c0ffee000001/solarcharger/278/State", "payload": {"value": 4}}
+  ]
+}
