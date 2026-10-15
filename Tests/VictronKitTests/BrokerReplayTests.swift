@@ -52,13 +52,8 @@ final class BrokerReplayTests: XCTestCase {
         replayer.stop()
         broker.stop()
 
-        // Verify no mosquitto processes are left running
-        let task = Process()
-        task.launchPath = "/usr/bin/pgrep"
-        task.arguments = ["mosquitto"]
-        task.launch()
-        task.waitUntilExit()
-        XCTAssertEqual(task.terminationStatus, 1, "No mosquitto processes should be running after tests")
+        // Our own broker must be gone. (Not a global pgrep: other test runs may have their own brokers.)
+        XCTAssertFalse(broker.isRunning, "this test's mosquitto should have stopped")
 
         super.tearDown()
     }

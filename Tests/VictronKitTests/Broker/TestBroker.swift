@@ -4,6 +4,8 @@ import CocoaMQTT
 final class TestBroker {
     let port: UInt16
     private var process: Process?
+    /// True while this broker's own mosquitto process is alive (other tests may run their own brokers in parallel).
+    var isRunning: Bool { process?.isRunning ?? false }
     private var configFileURL: URL?
     private var configDirURL: URL?
     private let mqttBinaryPath = "/opt/homebrew/sbin/mosquitto"
@@ -92,7 +94,7 @@ final class TestBroker {
 
     func stop() {
         process?.terminate()
-        process = nil
+        process?.waitUntilExit()   // really gone before the next test; `process` is kept so isRunning can be checked
 
         if let configDirURL = configDirURL {
             let fileManager = FileManager.default
