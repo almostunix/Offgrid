@@ -25,6 +25,15 @@ public struct LiveOverviewScreen: View {
     public var body: some View {
         ScrollView {
             VStack(spacing: 24) {
+                // Customizable tile dashboard (T-30); the overview stays the home screen with all the links
+                NavigationLink(destination: DashboardScreen(store: store, recorder: recorder)) {
+                    Label("Dashboard", systemImage: "square.grid.2x2")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .background(.regularMaterial)
+                        .cornerRadius(16)
+                        .padding(.horizontal)
+                }
                 // Battery Status Section
                 BatteryStatusView(store: store)
                     .padding()
@@ -99,7 +108,7 @@ public struct LiveOverviewScreen: View {
 }
 
 /// Battery status view showing SoC, time-to-go, and charge state
-private struct BatteryStatusView: View {
+public struct BatteryStatusView: View {
     @ObservedObject var store: LiveDataStore
     
     var batterySoc: Double? {
@@ -114,7 +123,7 @@ private struct BatteryStatusView: View {
         return BatteryStatusHelper.chargeState(from: store.system, batteries: store.batteries)
     }
     
-    var body: some View {
+    public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Battery Status")
                 .font(.headline)
@@ -193,10 +202,10 @@ private struct BatteryStatusView: View {
 }
 
 /// Power flow view showing watts in and out
-private struct PowerFlowView: View {
+public struct PowerFlowView: View {
     @ObservedObject var store: LiveDataStore
     
-    var body: some View {
+    public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Power Flow")
                 .font(.headline)
@@ -258,10 +267,10 @@ private struct PowerItemView: View {
 }
 
 /// Device list preview showing a summary of connected devices
-private struct DeviceListPreview: View {
+public struct DeviceListPreview: View {
     @ObservedObject var store: LiveDataStore
     
-    var body: some View {
+    public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Devices")
                 .font(.headline)
@@ -312,10 +321,10 @@ private struct DeviceListPreview: View {
 }
 
 /// Device states view showing battery, solar charger, and inverter states
-private struct DeviceStatesView: View {
+public struct DeviceStatesView: View {
     @ObservedObject var store: LiveDataStore
     
-    var body: some View {
+    public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Device States")
                 .font(.headline)
@@ -344,12 +353,12 @@ private struct DeviceStatesView: View {
 }
 
 /// Individual device state item view
-private struct DeviceStateItemView: View {
+public struct DeviceStateItemView: View {
     let title: String
     let state: DeviceState
     let productName: String?
     
-    var body: some View {
+    public var body: some View {
         HStack(alignment: .center, spacing: 12) {
             Text(title)
                 .font(.subheadline)
@@ -402,10 +411,10 @@ private struct DeviceStateItemView: View {
 }
 
 /// Alarm log preview showing active alarms count
-private struct AlarmLogPreview: View {
+public struct AlarmLogPreview: View {
     @ObservedObject var store: LiveDataStore
     
-    var body: some View {
+    public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Alarm Log")
@@ -475,10 +484,10 @@ private struct AlarmLogPreview: View {
 }
 
 /// Topic explorer preview showing a summary of received topics
-private struct TopicExplorerPreview: View {
+public struct TopicExplorerPreview: View {
     @ObservedObject var store: LiveDataStore
     
-    var body: some View {
+    public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Topic Explorer")
                 .font(.headline)
@@ -510,10 +519,10 @@ private struct TopicExplorerPreview: View {
 }
 
 /// Live charts preview showing a summary
-private struct LiveChartsPreview: View {
+public struct LiveChartsPreview: View {
     @ObservedObject var store: LiveDataStore
     
-    var body: some View {
+    public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Live Charts")
                 .font(.headline)
