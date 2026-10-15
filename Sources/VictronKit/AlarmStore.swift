@@ -18,6 +18,18 @@ public enum AlarmLevel: Int, Comparable {
     public static func < (lhs: AlarmLevel, rhs: AlarmLevel) -> Bool {
         return lhs.rawValue < rhs.rawValue
     }
+    
+    /// Display string for the alarm level
+    public var displayString: String {
+        switch self {
+        case .ok:
+            return "OK"
+        case .warning:
+            return "Warning"
+        case .alarm:
+            return "Alarm"
+        }
+    }
 }
 
 public struct AlarmState: Identifiable, Equatable {

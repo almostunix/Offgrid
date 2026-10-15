@@ -932,4 +932,96 @@ final class LiveDataStoreTests: XCTestCase {
         store.handle(topic: topic, payload: payload)
         XCTAssertEqual(store.system.serial, "HQ212200XA")
     }
+    
+    func testAlarmIntegration() throws {
+        let store = LiveDataStore()
+        
+        // Add an alarm
+        let topic = "N/test/battery/279/Alarms/LowSoc"
+        let payload = Data("{\"value\":1}".utf8)
+        store.handle(topic: topic, payload: payload)
+        
+        // Verify alarm was added to alarmStore
+        XCTAssertEqual(store.alarmStore.active.count, 1)
+        let alarm = store.alarmStore.active[0]
+        XCTAssertEqual(alarm.service, "battery")
+        XCTAssertEqual(alarm.instance, "279")
+        XCTAssertEqual(alarm.name, "LowSoc")
+        XCTAssertEqual(alarm.level, .warning)
+        
+        // Add another alarm
+        let topic2 = "N/test/vebus/276/Alarms/L1/Overload"
+        let payload2 = Data("{\"value\":2}".utf8)
+        store.handle(topic: topic2, payload: payload2)
+        
+        // Verify both alarms are active
+        XCTAssertEqual(store.alarmStore.active.count, 2)
+        
+        // Clear the first alarm
+        let clearPayload = Data()
+        store.handle(topic: topic, payload: clearPayload)
+        
+        // Verify only one alarm remains
+        XCTAssertEqual(store.alarmStore.active.count, 1)
+    }
+    
+    func testAlarmIntegrationWithFixtures() throws {
+        let store = LiveDataStore()
+        let bundle = Bundle.module
+        guard let url = bundle.url(forResource: "alarms", withExtension: "json", subdirectory: "Fixtures") else {
+            XCTFail("Could not find alarms.json")
+            return
+        }
+        
+        let data = try Data(contentsOf: url)
+        let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
+        let messages = json?["messages"] as? [[String: Any]] ?? []
+        
+        // Process all alarm messages
+        for message in messages {
+            if let topic = message["topic"] as? String,
+               let payload = message["payload"] as? [String: Any] {
+                let payloadData = try JSONSerialization.data(withJSONObject: payload)
+                store.handle(topic: topic, payload: payloadData)
+            }
+        }
+        
+        // Expected active alarms from the fixture:
+        // - vebus 276 L1/Overload (alarm, level 2)
+        // - battery 279 LowSoc (warning, level 1)
+        // - vebus 276 L1/HighTemperature (warning, level 1)
+        // Battery Alarms/Alarm is ignored (deprecated)
+        // Ripple (null) is not active
+        
+        XCTAssertEqual(store.alarmStore.active.count, 3, "Should have 3 active alarms")
+        
+        // First alarm should be vebus 276 L1/Overload (alarm level)
+        let firstAlarm = store.alarmStore.active[0]
+        XCTAssertEqual(firstAlarm.service, "vebus")
+        XCTAssertEqual(firstAlarm.instance, "276")
+        XCTAssertEqual(firstAlarm.name, "L1/Overload")
+        XCTAssertEqual(firstAlarm.level, .alarm)
+        
+        // Then the two warnings, newest first
+        let secondAlarm = store.alarmStore.active[1]
+        XCTAssertEqual(secondAlarm.service, "vebus")
+        XCTAssertEqual(secondAlarm.instance, "276")
+        XCTAssertEqual(secondAlarm.name, "L1/HighTemperature")
+        XCTAssertEqual(secondAlarm.level, .warning)
+        
+        let thirdAlarm = store.alarmStore.active[2]
+        XCTAssertEqual(thirdAlarm.service, "battery")
+        XCTAssertEqual(thirdAlarm.instance, "279")
+        XCTAssertEqual(thirdAlarm.name, "LowSoc")
+        XCTAssertEqual(thirdAlarm.level, .warning)
+        
+        // Verify log contains the alarm events
+        XCTAssertGreaterThan(store.alarmStore.log.count, 0)
+    }
+    
+    // Test to ensure compilation
+    func testCompilationCheck() {
+        let store = LiveDataStore()
+        XCTAssertNotNil(store.alarmStore)
+    }
 }

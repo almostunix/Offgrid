@@ -45,8 +45,6 @@ public final class ConnectionManager {
     /// History store for managing history data
     public let historyStore = HistoryStore()
 
-    /// Alarm store for managing Victron alarms
-    public let alarmStore = AlarmStore()
 
     private let mqtt: CocoaMQTT
     private let liveDataStore: LiveDataStore
@@ -165,7 +163,6 @@ public final class ConnectionManager {
         }
         liveDataStore.handle(topic: topic, payload: payload)
         historyStore.handle(topic: topic, payload: payload)
-        alarmStore.handle(topic: topic, payload: payload)
         onMessage?(topic)
         
         // Check for full_publish_completed

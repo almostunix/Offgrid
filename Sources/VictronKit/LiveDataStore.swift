@@ -128,6 +128,9 @@ public struct ReceivedTopic: Identifiable, Equatable {
 
 /// Stores parsed MQTT messages and provides typed device models
 public final class LiveDataStore: ObservableObject {
+    /// The alarm store for managing Victron alarms
+    public let alarmStore = AlarmStore()
+    
     /// The detected portal ID
     public private(set) var portalId: String? {
         didSet {
@@ -194,7 +197,8 @@ public final class LiveDataStore: ObservableObject {
             if let currentPortalId = portalId, currentPortalId != parsedTopic.portalId {
                 return
             }
-            
+            alarmStore.handle(topic: topic, payload: payload)   // our installation only; clears that device's alarms
+
             // Only remove devices, not system
             if parsedTopic.service == "battery" {
                 batteries.removeValue(forKey: parsedTopic.instance)
@@ -222,7 +226,8 @@ public final class LiveDataStore: ObservableObject {
             if let currentPortalId = portalId, currentPortalId != parsedTopic.portalId {
                 return
             }
-            
+            alarmStore.handle(topic: topic, payload: payload)   // our installation only
+
             // Parse the message and update
             guard let message = topicParser.parseMessage(topic: topic, payload: jsonDict) else {
                 return

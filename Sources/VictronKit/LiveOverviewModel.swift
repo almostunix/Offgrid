@@ -85,6 +85,14 @@ public struct PowerFormatter {
 
 /// Helper functions for formatting time values
 public struct TimeFormatter {
+    /// Date formatter for consistent date/time display
+    public static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
     /// Format time-to-go value for display
     /// - Parameter seconds: Time in seconds
     /// - Returns: Formatted string (e.g., "2:30h")
@@ -92,6 +100,21 @@ public struct TimeFormatter {
         let hours = Int(seconds / 3600)
         let minutes = Int((seconds.truncatingRemainder(dividingBy: 3600)) / 60)
         return String(format: "%d:%02dh", hours, minutes)
+    }
+
+    /// Format time since a given date
+    /// - Parameter date: The date to format
+    /// - Returns: Formatted string (e.g., "2h ago", "1d ago")
+    public static func formatTimeSince(_ date: Date) -> String {
+        let components = Calendar.current.dateComponents([.hour, .day], from: date, to: Date())
+        
+        if let hours = components.hour, hours > 0 {
+            return "\(hours)h ago"
+        } else if let days = components.day, days > 0 {
+            return "\(days)d ago"
+        } else {
+            return "Just now"
+        }
     }
 }
 

@@ -57,6 +57,16 @@ public struct LiveOverviewScreen: View {
                         .padding(.horizontal)
                 }
                 
+                // Alarm Log Section
+                NavigationLink(destination: AlarmLogScreen(alarmStore: store.alarmStore)) {
+                    AlarmLogPreview(store: store)
+                        .padding()
+                        .background(.regularMaterial)
+                        .cornerRadius(16)
+                        .shadow(radius: 3)
+                        .padding(.horizontal)
+                }
+                
                 // Topic Explorer Section
                 NavigationLink(destination: TopicExplorerScreen(store: store)) {
                     TopicExplorerPreview(store: store)
@@ -373,6 +383,79 @@ private struct DeviceStateItemView: View {
             return Color.white
         case .lowPower, .passthru, .storage, .equalize, .unknown:
             return Color.primary
+        }
+    }
+}
+
+/// Alarm log preview showing active alarms count
+private struct AlarmLogPreview: View {
+    @ObservedObject var store: LiveDataStore
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Alarm Log")
+                    .font(.headline)
+                
+                Spacer()
+                
+                // Active alarm badge
+                if !store.alarmStore.active.isEmpty {
+                    Text("\("+" + String(store.alarmStore.active.count))")
+                        .font(.caption)
+                        .foregroundStyle(.white)
+                        .padding(4)
+                        .background(Color.red)
+                        .clipShape(Circle())
+                }
+            }
+            
+            // Show active alarms
+            if store.alarmStore.active.isEmpty {
+                Text("No active alarms")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(Array(store.alarmStore.active.prefix(3)), id: \.id) { alarm in
+                    HStack {
+                        Circle()
+                            .fill(alarmLevelColor(for: alarm.level))
+                            .frame(width: 8, height: 8)
+                        
+                        Text("\("+" + alarm.service.capitalized + ": " + alarm.name)")
+                            .font(.subheadline)
+                        
+                        Spacer()
+                        
+                        Text(alarm.level.displayString)
+                            .font(.caption)
+                            .bold()
+                            .padding(2)
+                            .background(alarmLevelColor(for: alarm.level))
+                            .foregroundStyle(.white)
+                            .cornerRadius(4)
+                    }
+                    .padding(.vertical, 2)
+                }
+                
+                if store.alarmStore.active.count > 3 {
+                    Text("+" + String(store.alarmStore.active.count - 3) + " more active alarms")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+            }
+        }
+    }
+    
+    private func alarmLevelColor(for level: AlarmLevel) -> Color {
+        switch level {
+        case .alarm:
+            return Color.red
+        case .warning:
+            return Color.orange
+        case .ok:
+            return Color.green
         }
     }
 }
