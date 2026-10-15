@@ -21,6 +21,9 @@ public struct LiveOverviewScreen: View {
     
     /// Whether demo mode is active
     public var isDemo: Bool = false
+
+    /// Connected over plain MQTT with a password (shows a "Not encrypted" badge)
+    public var isUnencrypted: Bool = false
     
     /// The portal ID for filtering data
     public var portalId: String?
@@ -29,11 +32,12 @@ public struct LiveOverviewScreen: View {
     public var onStopDemo: (() -> Void)?
 
     // Initialize with data store (previews may omit the recorder)
-    public init(store: LiveDataStore, recorder: LiveSeriesRecorder? = nil, historyCache: HistoryCache? = nil, isDemo: Bool = false, portalId: String? = nil, onStopDemo: (() -> Void)? = nil) {
+    public init(store: LiveDataStore, recorder: LiveSeriesRecorder? = nil, historyCache: HistoryCache? = nil, isDemo: Bool = false, isUnencrypted: Bool = false, portalId: String? = nil, onStopDemo: (() -> Void)? = nil) {
         self.store = store
         self.recorder = recorder ?? LiveSeriesRecorder(store: store)
         self.historyCache = historyCache ?? HistoryCache(inMemory: true)
         self.isDemo = isDemo
+        self.isUnencrypted = isUnencrypted
         self.portalId = portalId
         self.onStopDemo = onStopDemo
     }
@@ -131,6 +135,14 @@ public struct LiveOverviewScreen: View {
         .navigationTitle("Live Overview")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            if isUnencrypted {
+                ToolbarItem(placement: .navigation) {
+                    Label("Not encrypted", systemImage: "lock.open.fill")
+                        .labelStyle(.titleAndIcon)
+                        .foregroundStyle(.orange)
+                        .font(.caption)
+                }
+            }
             if isDemo {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: { onStopDemo?() }) {

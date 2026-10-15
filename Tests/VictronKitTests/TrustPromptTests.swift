@@ -55,4 +55,54 @@ final class TrustPromptTests: XCTestCase {
         )
         XCTAssertFalse(needsTrustPrompt(for: profile))
     }
+
+    func testNeedsPlaintextPasswordWarningPlainWithPassword() {
+        let profile = ConnectionProfile(
+            name: "Test",
+            host: "127.0.0.1",
+            port: 1883,
+            useTLS: false,
+            username: "test"
+        )
+        XCTAssertTrue(needsPlaintextPasswordWarning(for: profile, password: "secret"))
+    }
+
+    func testNeedsPlaintextPasswordWarningPlainWithNilPassword() {
+        let profile = ConnectionProfile(
+            name: "Test",
+            host: "127.0.0.1",
+            port: 1883,
+            useTLS: false,
+            username: "test"
+        )
+        XCTAssertFalse(needsPlaintextPasswordWarning(for: profile, password: nil))
+    }
+
+    func testNeedsPlaintextPasswordWarningPlainWithEmptyPassword() {
+        let profile = ConnectionProfile(
+            name: "Test",
+            host: "127.0.0.1",
+            port: 1883,
+            useTLS: false,
+            username: "test"
+        )
+        XCTAssertFalse(needsPlaintextPasswordWarning(for: profile, password: ""))
+    }
+
+    func testNeedsPlaintextPasswordWarningTLSWithPassword() {
+        let profile = ConnectionProfile(
+            name: "Test",
+            host: "127.0.0.1",
+            port: 8883,
+            useTLS: true,
+            username: "test"
+        )
+        XCTAssertFalse(needsPlaintextPasswordWarning(for: profile, password: "secret"))
+    }
+
+    func testPlaintextPasswordWarningMessage() {
+        XCTAssertFalse(plaintextPasswordWarning.isEmpty)
+        XCTAssert(plaintextPasswordWarning.contains("unencrypted"))
+        XCTAssert(plaintextPasswordWarning.contains("TLS"))
+    }
 }

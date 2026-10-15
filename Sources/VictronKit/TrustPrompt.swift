@@ -31,3 +31,15 @@ public func formatFingerprint(forDisplay fingerprint: String) -> String {
 public func needsTrustPrompt(for profile: ConnectionProfile) -> Bool {
     return profile.useTLS && profile.pinnedCertificateSHA256 == nil
 }
+
+/// Determines if a profile with password needs plaintext password warning
+/// - Parameters:
+///   - profile: The connection profile
+///   - password: The password (optional)
+/// - Returns: True if the profile uses plain MQTT with a password (needs warning)
+public func needsPlaintextPasswordWarning(for profile: ConnectionProfile, password: String?) -> Bool {
+    return !profile.useTLS && !(password ?? "").isEmpty
+}
+
+/// Warning message for plaintext password connections
+public let plaintextPasswordWarning = "Your password will be sent unencrypted. Anyone on this network could read it and use it to control your Cerbo. Switch the Cerbo to TLS (port 8883) if you can."

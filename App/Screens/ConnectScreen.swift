@@ -11,12 +11,12 @@ struct ConnectScreen: View {
         NavigationStack {
             Group {
                 if viewModel.connectionState == .connected {
-                    LiveOverviewScreen(store: viewModel.liveDataStore, recorder: viewModel.liveSeriesRecorder, historyCache: viewModel.isDemo ? viewModel.demoHistoryCache : viewModel.historyCache, isDemo: viewModel.isDemo, portalId: viewModel.portalId, onStopDemo: { viewModel.stopDemo() })
+                    LiveOverviewScreen(store: viewModel.liveDataStore, recorder: viewModel.liveSeriesRecorder, historyCache: viewModel.isDemo ? viewModel.demoHistoryCache : viewModel.historyCache, isDemo: viewModel.isDemo, isUnencrypted: viewModel.isUnencryptedWithPassword, portalId: viewModel.portalId, onStopDemo: { viewModel.stopDemo() })
                 } else {
                     List {
                         // Connection status
                         Section {
-                            ConnectionStatusView(state: viewModel.connectionState, portalId: viewModel.portalId)
+                            ConnectionStatusView(state: viewModel.connectionState, portalId: viewModel.portalId, isUnencryptedWithPassword: viewModel.isUnencryptedWithPassword)
                             
                             if viewModel.certificateChanged {
                                 Label("This Cerbo's certificate has changed since you trusted it. The app will not connect. If you replaced or reset the Cerbo, delete this connection and add it again.", systemImage: "exclamationmark.shield.fill")
@@ -138,6 +138,16 @@ struct ConnectScreen: View {
                     )
                 }
             }
+            .alert("Not encrypted", isPresented: $viewModel.showingPlaintextWarning) {
+                Button("Cancel", role: .cancel) {
+                    viewModel.cancelPlaintextWarning()
+                }
+                Button("Continue", role: .destructive) {
+                    viewModel.continuePlaintextConnect()
+                }
+            } message: {
+                Text(plaintextPasswordWarning)
+            }
             .onAppear {
                 viewModel.loadProfiles()
             }
@@ -148,6 +158,7 @@ struct ConnectScreen: View {
 struct ConnectionStatusView: View {
     let state: ConnectionState
     let portalId: String?
+    let isUnencryptedWithPassword: Bool
 
     var body: some View {
         HStack {
@@ -162,6 +173,11 @@ struct ConnectionStatusView: View {
                 }
             }
             Spacer()
+            if isUnencryptedWithPassword && state == .connected {
+                Label("Not encrypted", systemImage: "lock.open.fill")
+                    .foregroundStyle(.orange)
+                    .font(.caption)
+            }
         }
         .padding(.vertical, 8)
     }
@@ -293,6 +309,8 @@ class ConnectViewModel: ObservableObject {
     @Published var trustPromptFingerprint: String?
     @Published var trustPromptProfile: ConnectionProfile?
     @Published var showingTrustPrompt = false
+    @Published var showingPlaintextWarning = false
+    @Published private(set) var isUnencryptedWithPassword = false
 
     var certificateChanged: Bool {
         connectionState == .failed(.untrustedCertificate)
@@ -312,6 +330,9 @@ class ConnectViewModel: ObservableObject {
     private var demoPlayer: DemoPlayer?
     private var demoHistoryStore: HistoryStore?
     private var historySaveWork: DispatchWorkItem?
+    private var pendingProfile: ConnectionProfile?
+    private var pendingPassword: String?
+    private var pendingIsSaved = false   // false for a manual connection (nothing to update in the store)
 
     init() {
         do {
@@ -363,31 +384,43 @@ class ConnectViewModel: ObservableObject {
     func connect(to profile: ConnectionProfile) {
         disconnect()
         
-        if needsTrustPrompt(for: profile) {
-            // Show trust prompt
-            trustPromptProfile = profile
+        do {
+            let password = try profileStore.password(for: profile)
             
-            // Fetch server fingerprint
-            guard let port = UInt16(exactly: profile.port), port > 0 else { connectionState = .failed(.invalidPort(profile.port)); return }
-            ConnectionManager.fetchServerFingerprint(host: profile.host, port: port) { [weak self] result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success(let fingerprint):
-                        self?.trustPromptFingerprint = fingerprint
-                        self?.trustPromptHost = profile.host
-                        self?.trustPromptPort = profile.port
-                        self?.showingTrustPrompt = true
-                    case .failure(let error):
-                        print("Failed to fetch server fingerprint: " + error.localizedDescription)
-                        self?.trustPromptProfile = nil
-                        self?.connectionState = .failed(error)
+            // Check if plaintext password warning is needed
+            if needsPlaintextPasswordWarning(for: profile, password: password) {
+                // Store pending connection and show warning
+                pendingProfile = profile
+                pendingPassword = password
+                pendingIsSaved = true
+                showingPlaintextWarning = true
+                return
+            }
+            
+            // Check if trust prompt is needed
+            if needsTrustPrompt(for: profile) {
+                // Show trust prompt
+                trustPromptProfile = profile
+                
+                // Fetch server fingerprint
+                guard let port = UInt16(exactly: profile.port), port > 0 else { connectionState = .failed(.invalidPort(profile.port)); return }
+                ConnectionManager.fetchServerFingerprint(host: profile.host, port: port) { [weak self] result in
+                    DispatchQueue.main.async {
+                        switch result {
+                        case .success(let fingerprint):
+                            self?.trustPromptFingerprint = fingerprint
+                            self?.trustPromptHost = profile.host
+                            self?.trustPromptPort = profile.port
+                            self?.showingTrustPrompt = true
+                        case .failure(let error):
+                            print("Failed to fetch server fingerprint: " + error.localizedDescription)
+                            self?.trustPromptProfile = nil
+                            self?.connectionState = .failed(error)
+                        }
                     }
                 }
-            }
-        } else {
-            // No trust prompt needed, connect directly
-            do {
-                let password = try profileStore.password(for: profile)
+            } else {
+                // No prompts needed, connect directly
                 connectionManager = try ConnectionManager(profile: profile, liveDataStore: liveDataStore, password: password)
                 setupConnectionManagerCallbacks()
                 connectionManager?.connect()
@@ -396,10 +429,10 @@ class ConnectViewModel: ObservableObject {
                 updatedProfile.markAsLastUsed()
                 try profileStore.updateProfile(updatedProfile, password: nil)
                 loadProfiles()
-            } catch {
-                print("Failed to connect: " + error.localizedDescription)
-                connectionState = .failed(.unknown(error.localizedDescription))
             }
+        } catch {
+            print("Failed to connect: " + error.localizedDescription)
+            connectionState = .failed(.unknown(error.localizedDescription))
         }
     }
 
@@ -411,9 +444,21 @@ class ConnectViewModel: ObservableObject {
     func connectManually() {
         guard !host.isEmpty else { return }
         disconnect()
+        
+        let port = Int(portString) ?? 1883
+        let profile = ConnectionProfile(name: host, host: host, port: port, useTLS: useTLS, username: username.isEmpty ? nil : username)
+        
+        // Check if plaintext password warning is needed
+        if needsPlaintextPasswordWarning(for: profile, password: password.isEmpty ? nil : password) {
+            // Store pending connection and show warning
+            pendingProfile = profile
+            pendingPassword = password.isEmpty ? nil : password
+            pendingIsSaved = false
+            showingPlaintextWarning = true
+            return
+        }
+        
         do {
-            let port = Int(portString) ?? 1883
-            let profile = ConnectionProfile(name: host, host: host, port: port, useTLS: useTLS, username: username.isEmpty ? nil : username)
             connectionManager = try ConnectionManager(profile: profile, liveDataStore: liveDataStore, password: password.isEmpty ? nil : password)
             setupConnectionManagerCallbacks()
             connectionManager?.connect()
@@ -430,6 +475,7 @@ class ConnectViewModel: ObservableObject {
         connectionState = .idle
         portalId = nil
         connectedProfile = nil
+        isUnencryptedWithPassword = false
     }
 
     func trustAndConnect() {
@@ -463,6 +509,41 @@ class ConnectViewModel: ObservableObject {
     func cancelTrustPrompt() {
         resetTrustPrompt()
         connectionState = .idle
+    }
+
+    func cancelPlaintextWarning() {
+        pendingProfile = nil
+        pendingPassword = nil
+        showingPlaintextWarning = false
+    }
+
+    func continuePlaintextConnect() {
+        guard let profile = pendingProfile, let password = pendingPassword else { return }
+        
+        do {
+            connectionManager = try ConnectionManager(profile: profile, liveDataStore: liveDataStore, password: password)
+            setupConnectionManagerCallbacks()
+            connectionManager?.connect()
+            connectedProfile = profile
+            isUnencryptedWithPassword = true
+            if pendingIsSaved {
+                var updatedProfile = profile
+                updatedProfile.markAsLastUsed()
+                try? profileStore.updateProfile(updatedProfile, password: nil)
+                loadProfiles()
+            }
+            
+            // Clear pending state
+            pendingProfile = nil
+            pendingPassword = nil
+            showingPlaintextWarning = false
+        } catch {
+            print("Failed to connect after plaintext warning: " + error.localizedDescription)
+            connectionState = .failed(.unknown(error.localizedDescription))
+            pendingProfile = nil
+            pendingPassword = nil
+            showingPlaintextWarning = false
+        }
     }
 
     private func resetTrustPrompt() {
@@ -514,6 +595,7 @@ class ConnectViewModel: ObservableObject {
         isDemo = false
         connectionState = .idle
         portalId = nil
+        isUnencryptedWithPassword = false
     }
 
     private func setupConnectionManagerCallbacks() {

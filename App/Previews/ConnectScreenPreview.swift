@@ -13,11 +13,12 @@ struct ConnectionStatusPreview: View {
     var body: some View {
         List {
             Section {
-                ConnectionStatusView(state: .idle, portalId: nil)
-                ConnectionStatusView(state: .connecting, portalId: nil)
-                ConnectionStatusView(state: .connected, portalId: "c0ffee000001")
-                ConnectionStatusView(state: .reconnecting, portalId: "c0ffee000001")
-                ConnectionStatusView(state: .failed(.connectionRefused), portalId: nil)
+                ConnectionStatusView(state: .idle, portalId: nil, isUnencryptedWithPassword: false)
+                ConnectionStatusView(state: .connecting, portalId: nil, isUnencryptedWithPassword: false)
+                ConnectionStatusView(state: .connected, portalId: "c0ffee000001", isUnencryptedWithPassword: false)
+                ConnectionStatusView(state: .reconnecting, portalId: "c0ffee000001", isUnencryptedWithPassword: false)
+                ConnectionStatusView(state: .failed(.connectionRefused), portalId: nil, isUnencryptedWithPassword: false)
+                ConnectionStatusView(state: .connected, portalId: "c0ffee000001", isUnencryptedWithPassword: true)
             }
         }
         .previewLayout(.sizeThatFits)
