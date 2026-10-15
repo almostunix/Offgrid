@@ -215,7 +215,7 @@ final class LiveSeriesRecorderTests: XCTestCase {
 
         // The recorder debounces store changes by 1 s on the main queue, so let the main run loop turn for up to 3 s.
         let end = Date().addingTimeInterval(3)
-        while !recorded && Date() < end { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+        while !recorded && Date() < end { RunLoop.main.run(until: Date().addingTimeInterval(0.2)) }
         XCTAssertTrue(recorded, "a store change should lead to a record within the debounce window")
         XCTAssertEqual(recorder.buffer(for: .batteryPower).getFiveMinuteWindow(at: testDate).samples.map(\.value), [66.56])
     }
@@ -233,5 +233,38 @@ final class LiveSeriesRecorderTests: XCTestCase {
             XCTAssertTrue(recorder.buffer(for: series).getFiveMinuteWindow().samples.isEmpty, "\(series) not cleared")
             XCTAssertTrue(recorder.buffer(for: series).getOneHourWindow().samples.isEmpty, "\(series) not cleared")
         }
+    }
+    
+    func testRapidStoreChangesTriggerMultipleRecords() throws {
+        // This test verifies that rapid store changes (like from a real Cerbo) 
+        // trigger multiple records, not just one debounced record
+        
+        // Change store value every 200 ms (real time, as a Cerbo does) for 3 seconds (15 updates)
+        let startTime = testDate!
+        let endTime = startTime.addingTimeInterval(3.0)
+        var iteration = 0
+        
+        while testDate! < endTime {
+            let payload = try JSONSerialization.data(withJSONObject: ["value": Double(iteration * 10)])
+            store.handle(topic: "N/c0ffee000001/system/0/Dc/Battery/Power", payload: payload)
+            
+            // Advance time by 200ms
+            testDate = testDate!.addingTimeInterval(0.2)
+            
+            // Give the run loop a chance to process
+            RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+            
+            iteration += 1
+        }
+        
+        // Wait a bit more for any pending operations
+        RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+        
+        // With throttle, we should get multiple samples (at least 2) in the buffer
+        // With debounce, we would only get 1 sample
+        let batteryPowerBuffer = recorder.buffer(for: .batteryPower)
+        let samples = batteryPowerBuffer.getFiveMinuteWindow(at: testDate).samples
+        
+        XCTAssertGreaterThanOrEqual(samples.count, 2, "Rapid store changes should trigger multiple records, got: \(samples.count)")
     }
 }

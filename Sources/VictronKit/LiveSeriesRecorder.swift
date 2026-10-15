@@ -43,9 +43,9 @@ public final class LiveSeriesRecorder: ObservableObject {
             buffers[series] = RollingBuffer()
         }
         
-        // Subscribe to store changes with debouncing
+        // Subscribe to store changes with throttling
         cancellable = store.objectWillChange
-            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
+            .throttle(for: .seconds(1), scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] in
                 self?.record()
             }
