@@ -39,6 +39,9 @@ public final class ConnectionManager {
     /// Called on `queue` after each message has been passed to the LiveDataStore.
     public var onMessage: ((String) -> Void)?
 
+    /// History store for managing history data
+    public let historyStore = HistoryStore()
+
     private let mqtt: CocoaMQTT
     private let liveDataStore: LiveDataStore
     private let keepaliveInterval: TimeInterval
@@ -47,6 +50,7 @@ public final class ConnectionManager {
     private var keepaliveTimer: DispatchSourceTimer?
     private var sentFirstKeepalive = false
     private var userDisconnect = false
+    private var fullPublishCompleted = false
 
     /// - Parameters:
     ///   - keepaliveInterval: seconds between Victron keepalives (must stay under the Cerbo's 60 s timeout).
@@ -126,7 +130,14 @@ public final class ConnectionManager {
             }
         }
         liveDataStore.handle(topic: topic, payload: payload)
+        historyStore.handle(topic: topic, payload: payload)
         onMessage?(topic)
+        
+        // Check for full_publish_completed
+        if topic.hasSuffix("full_publish_completed") {
+            fullPublishCompleted = true
+            requestHistory()
+        }
     }
 
     // MARK: - Victron keepalive
@@ -158,5 +169,22 @@ public final class ConnectionManager {
         let payload = sentFirstKeepalive ? #"{"keepalive-options":["suppress-republish"]}"# : ""
         try? publisher.publish(topic: "R/\(id)/keepalive", payload: payload)
         sentFirstKeepalive = true
+    }
+
+    /// Request history data by publishing R/ sub-tree reads for all known solar chargers and batteries
+    public func requestHistory() {
+        queue.async {
+            guard let publisher = self.publisher, let id = self.portalId else { return }
+            
+            // Request solar charger history for all known instances
+            for instance in self.liveDataStore.solarChargers.keys {
+                try? publisher.publish(topic: "R/" + id + "/solarcharger/" + instance + "/History", payload: "")
+            }
+            
+            // Request battery history for all known instances
+            for instance in self.liveDataStore.batteries.keys {
+                try? publisher.publish(topic: "R/" + id + "/battery/" + instance + "/History", payload: "")
+            }
+        }
     }
 }

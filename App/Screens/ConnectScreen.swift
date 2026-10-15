@@ -94,6 +94,7 @@ struct ConnectScreen: View {
                             }
                         }
                     }
+                    .refreshable { viewModel.requestHistory() }
                 }
             }
             .navigationTitle("Cerbo Connection")
@@ -327,6 +328,11 @@ class ConnectViewModel: ObservableObject {
             print("Failed to connect: " + error.localizedDescription)
             connectionState = .failed(.unknown(error.localizedDescription))
         }
+    }
+
+    /// Pull-to-refresh: ask the Cerbo for the history sub-trees again (T-26). Read-only R/ requests only.
+    func requestHistory() {
+        connectionManager?.requestHistory()
     }
 
     func connectManually() {

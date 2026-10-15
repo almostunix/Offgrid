@@ -25,16 +25,16 @@ final class FixtureReplayer {
         mqtt.delegateQueue = queue
         mqtt.didConnectAck = { mqtt, ack in
             if ack == .accept {
-                mqtt.subscribe("R/c0ffee000001/keepalive")   // only after CONNACK
+                mqtt.subscribe("R/c0ffee000001/#")   // keepalive and sub-tree reads (one filter, so nothing is delivered twice)
             }
         }
         mqtt.didSubscribeTopics = { _, success, _ in
-            if success["R/c0ffee000001/keepalive"] != nil { subscribed.signal() }
+            if success["R/c0ffee000001/#"] != nil { subscribed.signal() }
         }
 
         mqtt.didReceiveMessage = { [weak self] mqtt, message, id in
             guard let self = self else { return }
-            self.handleKeepaliveMessage(topic: message.topic, payload: message.string ?? "")   // already on our queue
+            self.handleMessage(topic: message.topic, payload: message.string ?? "")   // already on our queue
         }
 
         _ = mqtt.connect()
@@ -85,6 +85,34 @@ final class FixtureReplayer {
         }
 
         return (suppress, echoId)
+    }
+
+    private func handleMessage(topic: String, payload: String) {
+        // Handle keepalive messages
+        if topic == "R/c0ffee000001/keepalive" {
+            handleKeepaliveMessage(topic: topic, payload: payload)
+            return
+        }
+        
+        // Handle R/ sub-tree read requests for history
+        if topic.hasPrefix("R/c0ffee000001/") && !payload.isEmpty {
+            // For non-empty payloads, treat as keepalive
+            handleKeepaliveMessage(topic: topic, payload: payload)
+            return
+        }
+        
+        // For empty payload R/ requests, publish matching fixtures
+        if topic.hasPrefix("R/c0ffee000001/") && payload.isEmpty {
+            let rTopic = topic
+            let nTopic = rTopic.replacingOccurrences(of: "R/", with: "N/")
+            
+            // Publish all fixtures whose topics start with the N/ equivalent
+            for fixture in fixtures {
+                if fixture.topic.hasPrefix(nTopic) {
+                    mqtt.publish(fixture.topic, withString: fixture.payload, qos: .qos0, retained: false)
+                }
+            }
+        }
     }
 
     private func handleKeepaliveMessage(topic: String, payload: String) {
