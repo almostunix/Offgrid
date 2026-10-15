@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made-up values in the shape of Victron's published skeleton:
+     github.com/victronenergy/meta-victronenergy meta-ve-software/recipes-networking/simple-upnpd/files/simple-upnpd.skeleton.xml -->
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+  <specVersion>
+    <major>1</major>
+    <minor>0</minor>
+  </specVersion>
+
+  <device>
+    <deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType>
+    <friendlyName>My Solar Installation (c0ffee000001)</friendlyName>
+    <manufacturer>Victron Energy</manufacturer>
+    <manufacturerURL>https://www.victronenergy.com</manufacturerURL>
+    <modelName>Cerbo GX</modelName>
+    <modelNumber>0xB040</modelNumber>
+    <modelURL>https://www.victronenergy.com/panel-systems-remote-monitoring</modelURL>
+    <serialNumber>HQ0000TEST</serialNumber>
+    <presentationURL>/</presentationURL>
+    <UDN>uuid:com.victronenergy.ccgx.C0:FF:EE:00:00:01</UDN>
+    <ve:X_VenusVersion xmlns:ve="urn:schemas-victronenergy-com:venusinfo-1">v3.60</ve:X_VenusVersion>
+    <ve:X_VrmPortalId xmlns:ve="urn:schemas-victronenergy-com:venusinfo-1">c0ffee000001</ve:X_VrmPortalId>
+    <ve:X_MqttOnLan xmlns:ve="urn:schemas-victronenergy-com:venusinfo-1">1</ve:X_MqttOnLan>
+    <ve:X_MqttWssOnLan xmlns:ve="urn:schemas-victronenergy-com:venusinfo-1">1</ve:X_MqttWssOnLan>
+    <ve:X_MqttTokenPairing xmlns:ve="urn:schemas-victronenergy-com:venusinfo-1">1</ve:X_MqttTokenPairing>
+    <deviceList>
+      <device>
+        <friendlyName>Nested device that must not overwrite the root device</friendlyName>
+        <manufacturer>Someone Else</manufacturer>
+      </device>
+    </deviceList>
+  </device>
+</root>

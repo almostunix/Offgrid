@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+  <specVersion>
+    <major>1</major>
+    <minor>0</minor>
+  </specVersion>
+  <device>
+    <deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType>
+    <friendlyName>Other Device</friendlyName>
+    <manufacturer>Other Company</manufacturer>
+    <manufacturerURL>https://www.othercompany.com/</manufacturerURL>
+    <modelDescription>Other Device</modelDescription>
+    <modelName>Other Device</modelName>
+    <modelNumber>00000000</modelNumber>
+    <modelURL>https://www.othercompany.com/</modelURL>
+    <serialNumber>987654321</serialNumber>
+    <UDN>uuid:com.othercompany.device.123456789</UDN>
+    <UPC>000000000000</UPC>
+    <presentationURL>http://192.168.1.200/</presentationURL>
+  </device>
+</root>
