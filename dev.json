@@ -32,5 +32,15 @@
       "files": "*.swift",
       "command": "swiftc -parse {file}"
     }
-  ]
+  ],
+  "review": {
+    "checklist": [
+      "Swift string interpolation uses exactly one backslash: \\(value). An escaped \\\\( renders as literal text on screen, and \"\\(\"%.0f W\", x)\" is not formatting; use String(format:).",
+      "No new LiveDataStore, HistoryStore, recorder or profile store is created where an existing one is passed in or owned by ConnectViewModel.",
+      "SwiftUI views live in App/Screens, never in Sources/VictronKit (the library also builds for macOS without UIKit).",
+      "Seeded random helpers (SplitMix64 and similar) use wrapping arithmetic (&*, &+) so they can't trap on overflow.",
+      "Tests that need a broker use TestBroker/FixtureReplayer on 127.0.0.1, wait for SUBACK/CONNACK instead of sleeping, fulfil every expectation, and stop the broker in tearDown; no nested queue.sync.",
+      "Nothing the app sends bypasses ReadOnlyPublisher (R/ topics only), and nothing contacts the real Cerbo."
+    ]
+  }
 }
