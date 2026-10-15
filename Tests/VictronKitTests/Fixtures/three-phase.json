@@ -1,0 +1,143 @@
+{
+  "portalId": "c0ffee000001",
+  "messages": [
+    {
+      "topic": "N/c0ffee000001/system/0/Serial",
+      "payload": {
+        "value": "HQ212200XA"
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Dc/Battery/Soc",
+      "payload": {
+        "value": 78.5
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Dc/Battery/Power",
+      "payload": {
+        "value": 66.56
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Dc/Pv/Power",
+      "payload": {
+        "value": 1250
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Ac/Grid/L1/Power",
+      "payload": {
+        "value": 1000
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Ac/Grid/L2/Power",
+      "payload": {
+        "value": 1100
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Ac/Grid/L3/Power",
+      "payload": {
+        "value": 1200
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Ac/Genset/L1/Power",
+      "payload": {
+        "value": 500
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Ac/Genset/L2/Power",
+      "payload": {
+        "value": 600
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Ac/Genset/L3/Power",
+      "payload": {
+        "value": 700
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Ac/ConsumptionOnOutput/L1/Power",
+      "payload": {
+        "value": 1180
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Ac/ConsumptionOnOutput/L2/Power",
+      "payload": {
+        "value": 1200
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Ac/ConsumptionOnOutput/L3/Power",
+      "payload": {
+        "value": 1300
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Ac/ConsumptionOnInput/L1/Power",
+      "payload": {
+        "value": 320
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Ac/ConsumptionOnInput/L2/Power",
+      "payload": {
+        "value": 350
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Ac/ConsumptionOnInput/L3/Power",
+      "payload": {
+        "value": 380
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/system/0/Dc/Battery/TimeToGo",
+      "payload": {
+        "value": 3600
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/vebus/276/Ac/ActiveIn/L1/P",
+      "payload": {
+        "value": 900
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/vebus/276/Ac/ActiveIn/L2/P",
+      "payload": {
+        "value": 1000
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/vebus/276/Ac/ActiveIn/L3/P",
+      "payload": {
+        "value": 1100
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/vebus/276/Ac/Out/L1/P",
+      "payload": {
+        "value": 1200
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/vebus/276/Ac/Out/L2/P",
+      "payload": {
+        "value": 1300
+      }
+    },
+    {
+      "topic": "N/c0ffee000001/vebus/276/Ac/Out/L3/P",
+      "payload": {
+        "value": 1400
+      }
+    }
+  ]
+}

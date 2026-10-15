@@ -276,7 +276,7 @@ public struct PowerFlowView: View {
             PowerItemView(title: "AC Consumption", value: store.system.acConsumptionTotal, color: .blue)
             
             // AC Input
-            PowerItemView(title: "AC Input", value: store.system.acConsumptionOnInput, color: .green)
+            PowerItemView(title: "AC Input", value: store.system.acInputPower, color: .green)
             
             // AC Output
             PowerItemView(title: "AC Output", value: store.system.acConsumptionOnOutput, color: .cyan)

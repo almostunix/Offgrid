@@ -73,7 +73,7 @@ private struct PowerFlowDiagramView: View {
 
             // Inverter at the bottom
             InverterComponentView(
-                acInputPower: store.system.acConsumptionOnInput,
+                acInputPower: store.system.acInputPower,
                 acOutputPower: store.system.acConsumptionOnOutput
             )
             
@@ -250,7 +250,7 @@ private struct PowerValuesSummaryView: View {
             PowerValueRow(title: "Battery Power", value: store.system.batteryPower, color: .blue)
             
             // AC Input
-            PowerValueRow(title: "AC Input", value: store.system.acConsumptionOnInput, color: .green)
+            PowerValueRow(title: "AC Input", value: store.system.acInputPower, color: .green)
             
             // AC Output
             PowerValueRow(title: "AC Output", value: store.system.acConsumptionOnOutput, color: .cyan)

@@ -9,14 +9,20 @@ import Combine
 
 /// Represents the system overview data
 public struct SystemModel: Equatable {
-    public let serial: String?
-    public let batterySoc: Double?
-    public let batteryPower: Double?
-    public let pvPower: Double?
-    public let acConsumptionOnOutput: Double?
-    public let acConsumptionOnInput: Double?
-    public let timeToGo: Double?
-    
+    public internal(set) var serial: String?
+    public internal(set) var batterySoc: Double?
+    public internal(set) var batteryPower: Double?
+    public internal(set) var pvPower: Double?
+    /// Loads on the inverter's AC output (sum of L1-L3).
+    public internal(set) var acConsumptionOnOutput: Double?
+    /// Loads on the AC input side (sum of L1-L3). Not the input power itself: that is acGridPower / acGensetPower.
+    public internal(set) var acConsumptionOnInput: Double?
+    /// Power from the grid, system Ac/Grid/Lx/Power summed (dbus-systemcalc-py; negative = feeding in).
+    public internal(set) var acGridPower: Double?
+    /// Power from a generator, system Ac/Genset/Lx/Power summed (dbus-systemcalc-py).
+    public internal(set) var acGensetPower: Double?
+    public internal(set) var timeToGo: Double?
+
     /// Total AC consumption (sum of output and input)
     public var acConsumptionTotal: Double? {
         if let output = acConsumptionOnOutput, let input = acConsumptionOnInput {
@@ -28,16 +34,27 @@ public struct SystemModel: Equatable {
         }
         return nil
     }
-    
-    public init(serial: String? = nil, batterySoc: Double? = nil, batteryPower: Double? = nil, 
-                pvPower: Double? = nil, acConsumptionOnOutput: Double? = nil, 
-                acConsumptionOnInput: Double? = nil, timeToGo: Double? = nil) {
+
+    /// Power coming in on the AC input: grid + generator (nil when neither is known).
+    public var acInputPower: Double? {
+        switch (acGridPower, acGensetPower) {
+        case (nil, nil): return nil
+        case let (grid, genset): return (grid ?? 0) + (genset ?? 0)
+        }
+    }
+
+    public init(serial: String? = nil, batterySoc: Double? = nil, batteryPower: Double? = nil,
+                pvPower: Double? = nil, acConsumptionOnOutput: Double? = nil,
+                acConsumptionOnInput: Double? = nil, timeToGo: Double? = nil,
+                acGridPower: Double? = nil, acGensetPower: Double? = nil) {
         self.serial = serial
         self.batterySoc = batterySoc
         self.batteryPower = batteryPower
         self.pvPower = pvPower
         self.acConsumptionOnOutput = acConsumptionOnOutput
         self.acConsumptionOnInput = acConsumptionOnInput
+        self.acGridPower = acGridPower
+        self.acGensetPower = acGensetPower
         self.timeToGo = timeToGo
     }
 }
@@ -87,11 +104,13 @@ public struct SolarChargerModel: Equatable {
 
 /// Represents VE.Bus inverter/charger data
 public struct InverterModel: Equatable {
-    public let productName: String?
-    public let acInputPower: Double?
-    public let acOutputPower: Double?
-    public let mode: Int?
-    public let state: Int?
+    public internal(set) var productName: String?
+    /// AC input power (sum of Ac/ActiveIn/L1-L3/P)
+    public internal(set) var acInputPower: Double?
+    /// AC output power (sum of Ac/Out/L1-L3/P)
+    public internal(set) var acOutputPower: Double?
+    public internal(set) var mode: Int?
+    public internal(set) var state: Int?
     
     public init(productName: String? = nil, acInputPower: Double? = nil, acOutputPower: Double? = nil, 
                 mode: Int? = nil, state: Int? = nil) {
@@ -182,6 +201,9 @@ public final class LiveDataStore: ObservableObject {
     /// Publisher for changes
     public let objectWillChange = PassthroughSubject<Void, Never>()
     
+    /// Per-phase AC values, keyed by "<service>/<instance>/<group>/<phase>", so the totals sum L1-L3.
+    private var phaseValues: [String: Double] = [:]
+
     /// Private index for fast topic lookup
     private var topicIndex: [String: Int] = [:]
     
@@ -199,6 +221,7 @@ public final class LiveDataStore: ObservableObject {
         inverters.removeAll()
         receivedTopics.removeAll()
         topicIndex.removeAll()
+        phaseValues.removeAll()
         droppedTopicCount = 0
         alarmStore.reset()
     }
@@ -334,109 +357,64 @@ public final class LiveDataStore: ObservableObject {
     
     /// Update system model with a message
     private func updateSystem(with message: ParsedMessage) {
-        let instance = message.topic.instance
-        let path = message.topic.path
-        
         // System messages should have instance "0"
-        guard instance == "0" else { return }
-        
-        if path.count == 1 && path[0] == "Serial" {
-            if case .string(let value) = message.value {
-                system = SystemModel(serial: value, batterySoc: system.batterySoc, 
-                                    batteryPower: system.batteryPower, pvPower: system.pvPower, 
-                                    acConsumptionOnOutput: system.acConsumptionOnOutput, 
-                                    acConsumptionOnInput: system.acConsumptionOnInput, 
-                                    timeToGo: system.timeToGo)
-            } else if case .null = message.value {
-                system = SystemModel(serial: nil, batterySoc: system.batterySoc, 
-                                    batteryPower: system.batteryPower, pvPower: system.pvPower, 
-                                    acConsumptionOnOutput: system.acConsumptionOnOutput, 
-                                    acConsumptionOnInput: system.acConsumptionOnInput, 
-                                    timeToGo: system.timeToGo)
-            }
-        } else if path.count == 3 && path[0...2] == ["Dc", "Battery", "Soc"] {
-            if case .number(let value) = message.value {
-                system = SystemModel(serial: system.serial, batterySoc: value, 
-                                    batteryPower: system.batteryPower, pvPower: system.pvPower, 
-                                    acConsumptionOnOutput: system.acConsumptionOnOutput, 
-                                    acConsumptionOnInput: system.acConsumptionOnInput, 
-                                    timeToGo: system.timeToGo)
-            } else if case .null = message.value {
-                system = SystemModel(serial: system.serial, batterySoc: nil, 
-                                    batteryPower: system.batteryPower, pvPower: system.pvPower, 
-                                    acConsumptionOnOutput: system.acConsumptionOnOutput, 
-                                    acConsumptionOnInput: system.acConsumptionOnInput, 
-                                    timeToGo: system.timeToGo)
-            }
-        } else if path.count == 3 && path[0...2] == ["Dc", "Battery", "Power"] {
-            if case .number(let value) = message.value {
-                system = SystemModel(serial: system.serial, batterySoc: system.batterySoc, 
-                                    batteryPower: value, pvPower: system.pvPower, 
-                                    acConsumptionOnOutput: system.acConsumptionOnOutput, 
-                                    acConsumptionOnInput: system.acConsumptionOnInput, 
-                                    timeToGo: system.timeToGo)
-            } else if case .null = message.value {
-                system = SystemModel(serial: system.serial, batterySoc: system.batterySoc, 
-                                    batteryPower: nil, pvPower: system.pvPower, 
-                                    acConsumptionOnOutput: system.acConsumptionOnOutput, 
-                                    acConsumptionOnInput: system.acConsumptionOnInput, 
-                                    timeToGo: system.timeToGo)
-            }
-        } else if path.count == 3 && path[0...2] == ["Dc", "Pv", "Power"] {
-            if case .number(let value) = message.value {
-                system = SystemModel(serial: system.serial, batterySoc: system.batterySoc, 
-                                    batteryPower: system.batteryPower, pvPower: value, 
-                                    acConsumptionOnOutput: system.acConsumptionOnOutput, 
-                                    acConsumptionOnInput: system.acConsumptionOnInput, 
-                                    timeToGo: system.timeToGo)
-            } else if case .null = message.value {
-                system = SystemModel(serial: system.serial, batterySoc: system.batterySoc, 
-                                    batteryPower: system.batteryPower, pvPower: nil, 
-                                    acConsumptionOnOutput: system.acConsumptionOnOutput, 
-                                    acConsumptionOnInput: system.acConsumptionOnInput, 
-                                    timeToGo: system.timeToGo)
-            }
-        } else if path.count == 4 && path[0...3] == ["Ac", "ConsumptionOnOutput", "L1", "Power"] {
-            if case .number(let value) = message.value {
-                system = SystemModel(serial: system.serial, batterySoc: system.batterySoc, 
-                                    batteryPower: system.batteryPower, pvPower: system.pvPower, 
-                                    acConsumptionOnOutput: value, acConsumptionOnInput: system.acConsumptionOnInput, 
-                                    timeToGo: system.timeToGo)
-            } else if case .null = message.value {
-                system = SystemModel(serial: system.serial, batterySoc: system.batterySoc, 
-                                    batteryPower: system.batteryPower, pvPower: system.pvPower, 
-                                    acConsumptionOnOutput: nil, acConsumptionOnInput: system.acConsumptionOnInput, 
-                                    timeToGo: system.timeToGo)
-            }
-        } else if path.count == 4 && path[0...3] == ["Ac", "ConsumptionOnInput", "L1", "Power"] {
-            if case .number(let value) = message.value {
-                system = SystemModel(serial: system.serial, batterySoc: system.batterySoc, 
-                                    batteryPower: system.batteryPower, pvPower: system.pvPower, 
-                                    acConsumptionOnOutput: system.acConsumptionOnOutput, 
-                                    acConsumptionOnInput: value, timeToGo: system.timeToGo)
-            } else if case .null = message.value {
-                system = SystemModel(serial: system.serial, batterySoc: system.batterySoc, 
-                                    batteryPower: system.batteryPower, pvPower: system.pvPower, 
-                                    acConsumptionOnOutput: system.acConsumptionOnOutput, 
-                                    acConsumptionOnInput: nil, timeToGo: system.timeToGo)
-            }
-        } else if path.count == 3 && path[0...2] == ["Dc", "Battery", "TimeToGo"] {
-            if case .number(let value) = message.value {
-                system = SystemModel(serial: system.serial, batterySoc: system.batterySoc, 
-                                    batteryPower: system.batteryPower, pvPower: system.pvPower, 
-                                    acConsumptionOnOutput: system.acConsumptionOnOutput, 
-                                    acConsumptionOnInput: system.acConsumptionOnInput, 
-                                    timeToGo: value)
-            } else if case .null = message.value {
-                system = SystemModel(serial: system.serial, batterySoc: system.batterySoc, 
-                                    batteryPower: system.batteryPower, pvPower: system.pvPower, 
-                                    acConsumptionOnOutput: system.acConsumptionOnOutput, 
-                                    acConsumptionOnInput: system.acConsumptionOnInput, 
-                                    timeToGo: nil)
+        guard message.topic.instance == "0" else { return }
+        let path = message.topic.path
+        var model = system
+        switch path.joined(separator: "/") {
+        case "Serial":
+            if case .string(let value) = message.value { model.serial = value }
+            else if case .null = message.value { model.serial = nil }
+        case "Dc/Battery/Soc": model.batterySoc = Self.number(message.value, else: model.batterySoc)
+        case "Dc/Battery/Power": model.batteryPower = Self.number(message.value, else: model.batteryPower)
+        case "Dc/Pv/Power": model.pvPower = Self.number(message.value, else: model.pvPower)
+        case "Dc/Battery/TimeToGo": model.timeToGo = Self.number(message.value, else: model.timeToGo)
+        default:
+            // Ac/<group>/L1|L2|L3/Power (dbus-systemcalc-py)
+            guard path.count == 4, path[0] == "Ac", path[3] == "Power",
+                  let total = phaseSum(message, key: "system/0/" + path[1], phase: path[2]) else { return }
+            switch path[1] {
+            case "ConsumptionOnOutput": model.acConsumptionOnOutput = total
+            case "ConsumptionOnInput": model.acConsumptionOnInput = total
+            case "Grid": model.acGridPower = total
+            case "Genset": model.acGensetPower = total
+            default: return
             }
         }
+        if model != system { system = model }
     }
-    
+
+    /// A number keeps the value, null clears it, anything else leaves `current`.
+    private static func number(_ value: PayloadValue, else current: Double?) -> Double? {
+        switch value {
+        case .number(let v): return v
+        case .null: return nil
+        default: return current
+        }
+    }
+
+    /// An Int field from a number: nil for null, `current` for values that aren't a whole number in range.
+    private static func integer(_ value: PayloadValue, else current: Int?) -> Int? {
+        switch value {
+        case .number(let v): return v.isFinite ? (Int(exactly: v.rounded()) ?? current) : current
+        case .null: return nil
+        default: return current
+        }
+    }
+
+    /// Records one phase (L1-L3) of a group and returns the group's sum (nil when no phase has a value).
+    /// Returns .none (ignore the message) for an unknown phase or a non-number, non-null value.
+    private func phaseSum(_ message: ParsedMessage, key: String, phase: String) -> Double?? {
+        guard ["L1", "L2", "L3"].contains(phase) else { return nil }
+        switch message.value {
+        case .number(let v): phaseValues[key + "/" + phase] = v
+        case .null: phaseValues[key + "/" + phase] = nil
+        default: return nil
+        }
+        let values = ["L1", "L2", "L3"].compactMap { phaseValues[key + "/" + $0] }
+        return .some(values.isEmpty ? nil : values.reduce(0, +))
+    }
+
     /// Update battery model with a message
     private func updateBattery(with message: ParsedMessage) {
         let instance = message.topic.instance
@@ -647,71 +625,19 @@ public final class LiveDataStore: ObservableObject {
     private func updateInverter(with message: ParsedMessage) {
         let instance = message.topic.instance
         let path = message.topic.path
-        
-        // Get or create inverter model for this instance
         var inverter = inverters[instance] ?? InverterModel()
-        
-        if path.count == 1 && path[0] == "ProductName" {
-            if case .string(let value) = message.value {
-                inverter = InverterModel(productName: value, acInputPower: inverter.acInputPower, 
-                                       acOutputPower: inverter.acOutputPower, 
-                                       mode: inverter.mode, state: inverter.state)
-            } else if case .null = message.value {
-                inverter = InverterModel(productName: nil, acInputPower: inverter.acInputPower, 
-                                       acOutputPower: inverter.acOutputPower, 
-                                       mode: inverter.mode, state: inverter.state)
-            }
-        } else if path.count == 4 && path[0...3] == ["Ac", "ActiveIn", "L1", "P"] {
-            if case .number(let value) = message.value {
-                inverter = InverterModel(productName: inverter.productName, 
-                                       acInputPower: value, 
-                                       acOutputPower: inverter.acOutputPower, 
-                                       mode: inverter.mode, state: inverter.state)
-            } else if case .null = message.value {
-                inverter = InverterModel(productName: inverter.productName, 
-                                       acInputPower: nil, 
-                                       acOutputPower: inverter.acOutputPower, 
-                                       mode: inverter.mode, state: inverter.state)
-            }
-        } else if path.count == 4 && path[0...3] == ["Ac", "Out", "L1", "P"] {
-            if case .number(let value) = message.value {
-                inverter = InverterModel(productName: inverter.productName, 
-                                       acInputPower: inverter.acInputPower, 
-                                       acOutputPower: value, 
-                                       mode: inverter.mode, state: inverter.state)
-            } else if case .null = message.value {
-                inverter = InverterModel(productName: inverter.productName, 
-                                       acInputPower: inverter.acInputPower, 
-                                       acOutputPower: nil, 
-                                       mode: inverter.mode, state: inverter.state)
-            }
-        } else if path.count == 1 && path[0] == "Mode" {
-            if case .number(let value) = message.value {
-                inverter = InverterModel(productName: inverter.productName, 
-                                       acInputPower: inverter.acInputPower, 
-                                       acOutputPower: inverter.acOutputPower, 
-                                       mode: Int(value), state: inverter.state)
-            } else if case .null = message.value {
-                inverter = InverterModel(productName: inverter.productName, 
-                                       acInputPower: inverter.acInputPower, 
-                                       acOutputPower: inverter.acOutputPower, 
-                                       mode: nil, state: inverter.state)
-            }
-        } else if path.count == 1 && path[0] == "State" {
-            if case .number(let value) = message.value {
-                inverter = InverterModel(productName: inverter.productName, 
-                                       acInputPower: inverter.acInputPower, 
-                                       acOutputPower: inverter.acOutputPower, 
-                                       mode: inverter.mode, state: Int(value))
-            } else if case .null = message.value {
-                inverter = InverterModel(productName: inverter.productName, 
-                                       acInputPower: inverter.acInputPower, 
-                                       acOutputPower: inverter.acOutputPower, 
-                                       mode: inverter.mode, state: nil)
-            }
+        switch path.joined(separator: "/") {
+        case "ProductName":
+            if case .string(let value) = message.value { inverter.productName = value }
+            else if case .null = message.value { inverter.productName = nil }
+        case "Mode": inverter.mode = Self.integer(message.value, else: inverter.mode)
+        case "State": inverter.state = Self.integer(message.value, else: inverter.state)
+        default:
+            // Ac/ActiveIn|Out/L1|L2|L3/P
+            guard path.count == 4, path[0] == "Ac", path[3] == "P", ["ActiveIn", "Out"].contains(path[1]),
+                  let total = phaseSum(message, key: "vebus/" + instance + "/" + path[1], phase: path[2]) else { return }
+            if path[1] == "ActiveIn" { inverter.acInputPower = total } else { inverter.acOutputPower = total }
         }
-        
-        // Update the inverters dictionary
         inverters[instance] = inverter
     }
 }
