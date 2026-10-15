@@ -189,6 +189,19 @@ public final class LiveDataStore: ObservableObject {
     public init() {
         self.portalId = nil
     }
+
+    /// Reset the store, clearing all data and preparing for a new connection
+    public func reset() {
+        portalId = nil
+        system = SystemModel()
+        batteries.removeAll()
+        solarChargers.removeAll()
+        inverters.removeAll()
+        receivedTopics.removeAll()
+        topicIndex.removeAll()
+        droppedTopicCount = 0
+        alarmStore.reset()
+    }
     
     /// Handle an MQTT message with topic and payload
     /// - Parameters:

@@ -23,8 +23,96 @@ final class LiveDataStoreTests: XCTestCase {
         super.tearDown()
     }
     
+    // MARK: - Reset Tests
+
+    func testResetClearsAllData() throws {
+        // Feed some data into the store
+        let messages = [
+            (topic: "N/c0ffee000001/system/0/Serial", payload: ["value": "HQ212200XA"]),
+            (topic: "N/c0ffee000001/system/0/Dc/Battery/Soc", payload: ["value": 78.5]),
+            (topic: "N/c0ffee000001/system/0/Dc/Battery/Power", payload: ["value": 66.56]),
+            (topic: "N/c0ffee000001/battery/279/ProductName", payload: ["value": "SmartShunt"]),
+            (topic: "N/c0ffee000001/solarcharger/278/ProductName", payload: ["value": "MPPT"]),
+            (topic: "N/c0ffee000001/vebus/276/ProductName", payload: ["value": "MultiPlus"]),
+            (topic: "N/c0ffee000001/battery/279/Alarms/LowVoltage", payload: ["value": 2])
+        ]
+
+        // Feed messages through store
+        for (topic, payload) in messages {
+            let payloadData = try JSONSerialization.data(withJSONObject: payload)
+            store.handle(topic: topic, payload: payloadData)
+        }
+
+        // Verify data is present
+        XCTAssertEqual(store.portalId, "c0ffee000001")
+        XCTAssertNotNil(store.system.serial)
+        XCTAssertEqual(store.batteries.count, 1)
+        XCTAssertEqual(store.solarChargers.count, 1)
+        XCTAssertEqual(store.inverters.count, 1)
+        XCTAssertGreaterThan(store.receivedTopics.count, 0)
+        XCTAssertGreaterThan(store.alarmStore.alarms.count, 0)
+
+        // Reset the store
+        store.reset()
+
+        // Verify everything is cleared
+        XCTAssertNil(store.portalId)
+        XCTAssertEqual(store.system, SystemModel())
+        XCTAssertTrue(store.batteries.isEmpty)
+        XCTAssertTrue(store.solarChargers.isEmpty)
+        XCTAssertTrue(store.inverters.isEmpty)
+        XCTAssertTrue(store.receivedTopics.isEmpty)
+        XCTAssertEqual(store.droppedTopicCount, 0)
+        XCTAssertTrue(store.alarmStore.alarms.isEmpty)
+        XCTAssertTrue(store.alarmStore.log.isEmpty)
+    }
+
+    func testResetAllowsNewDataWithDifferentPortal() throws {
+        // Feed demo data with portal c0ffee000001
+        let demoMessages = [
+            (topic: "N/c0ffee000001/system/0/Serial", payload: ["value": "DEMO_SERIAL"]),
+            (topic: "N/c0ffee000001/system/0/Dc/Battery/Soc", payload: ["value": 50.0]),
+            (topic: "N/c0ffee000001/battery/279/ProductName", payload: ["value": "DemoBattery"])
+        ]
+
+        for (topic, payload) in demoMessages {
+            guard let message = parser.parseMessage(topic: topic, payload: payload) else {
+                XCTFail("Should be able to parse message: \(topic)")
+                continue
+            }
+            store.update(with: message)
+        }
+
+        // Verify demo data is present
+        XCTAssertEqual(store.portalId, "c0ffee000001")
+        XCTAssertEqual(store.system.serial, "DEMO_SERIAL")
+        XCTAssertEqual(store.batteries.count, 1)
+
+        // Reset the store
+        store.reset()
+
+        // Feed new data with different portal aabbccddeeff
+        let newMessages = [
+            (topic: "N/aabbccddeeff/system/0/Serial", payload: ["value": "REAL_SERIAL"]),
+            (topic: "N/aabbccddeeff/system/0/Dc/Battery/Soc", payload: ["value": 80.0]),
+            (topic: "N/aabbccddeeff/battery/123/ProductName", payload: ["value": "RealBattery"])
+        ]
+
+        // Through handle(topic:payload:), the path the connection uses, so the portal filter is exercised
+        for (topic, payload) in newMessages {
+            store.handle(topic: topic, payload: try JSONSerialization.data(withJSONObject: payload))
+        }
+
+        // Verify new data is present and old data is gone
+        XCTAssertEqual(store.portalId, "aabbccddeeff")
+        XCTAssertEqual(store.system.serial, "REAL_SERIAL")
+        XCTAssertEqual(store.batteries.count, 1)
+        XCTAssertEqual(store.batteries.keys.first, "123")
+        XCTAssertEqual(store.batteries["123"]?.productName, "RealBattery")
+    }
+
     // MARK: - Portal ID Tests
-    
+
     func testPortalIdDetection() throws {
         let topic = "N/c0ffee000001/system/0/Serial"
         let payload: [String: Any] = ["value": "HQ212200XA"]

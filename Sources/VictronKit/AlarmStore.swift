@@ -62,6 +62,12 @@ public final class AlarmStore: ObservableObject {
         self.now = now
     }
 
+    /// Reset the alarm store, clearing all alarms and log
+    public func reset() {
+        alarms.removeAll()
+        log.removeAll()
+    }
+
     public func handle(topic: String, payload: Data) {
         // Parse the topic
         guard let parsedTopic = topicParser.parseTopic(topic) else {

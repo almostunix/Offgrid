@@ -384,6 +384,10 @@ class ConnectViewModel: ObservableObject {
     func connect(to profile: ConnectionProfile) {
         disconnect()
         
+        // Reset data stores for new connection
+        liveDataStore.reset()
+        liveSeriesRecorder.reset()
+        
         do {
             let password = try profileStore.password(for: profile)
             
@@ -445,6 +449,10 @@ class ConnectViewModel: ObservableObject {
         guard !host.isEmpty else { return }
         disconnect()
         
+        // Reset data stores for new connection
+        liveDataStore.reset()
+        liveSeriesRecorder.reset()
+        
         let port = Int(portString) ?? 1883
         let profile = ConnectionProfile(name: host, host: host, port: port, useTLS: useTLS, username: username.isEmpty ? nil : username)
         
@@ -480,6 +488,10 @@ class ConnectViewModel: ObservableObject {
 
     func trustAndConnect() {
         guard let profile = trustPromptProfile, let fingerprint = trustPromptFingerprint else { return }
+        
+        // Reset data stores for new connection
+        liveDataStore.reset()
+        liveSeriesRecorder.reset()
         
         // Update profile with pinned certificate
         var updatedProfile = profile
@@ -520,6 +532,10 @@ class ConnectViewModel: ObservableObject {
     func continuePlaintextConnect() {
         guard let profile = pendingProfile, let password = pendingPassword else { return }
         
+        // Reset data stores for new connection
+        liveDataStore.reset()
+        liveSeriesRecorder.reset()
+        
         do {
             connectionManager = try ConnectionManager(profile: profile, liveDataStore: liveDataStore, password: password)
             setupConnectionManagerCallbacks()
@@ -556,6 +572,10 @@ class ConnectViewModel: ObservableObject {
 
     func startDemo() {
         stopDemo()
+        
+        // Reset data stores for demo
+        liveDataStore.reset()
+        liveSeriesRecorder.reset()
         
         // Create a history store for demo mode
         demoHistoryStore = HistoryStore()

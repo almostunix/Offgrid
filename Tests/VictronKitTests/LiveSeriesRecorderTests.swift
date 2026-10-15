@@ -219,6 +219,19 @@ final class LiveSeriesRecorderTests: XCTestCase {
         XCTAssertTrue(recorded, "a store change should lead to a record within the debounce window")
         XCTAssertEqual(recorder.buffer(for: .batteryPower).getFiveMinuteWindow(at: testDate).samples.map(\.value), [66.56])
     }
+
+    func testResetEmptiesEveryBuffer() throws {
+        let store = LiveDataStore()
+        let recorder = LiveSeriesRecorder(store: store)
+        store.handle(topic: "N/c0ffee000001/system/0/Dc/Battery/Power", payload: try JSONSerialization.data(withJSONObject: ["value": 120.0]))
+        recorder.record()
+        XCTAssertFalse(recorder.buffer(for: .batteryPower).getFiveMinuteWindow().samples.isEmpty)
+
+        recorder.reset()
+
+        for series in LiveSeries.allCases {
+            XCTAssertTrue(recorder.buffer(for: series).getFiveMinuteWindow().samples.isEmpty, "\(series) not cleared")
+            XCTAssertTrue(recorder.buffer(for: series).getOneHourWindow().samples.isEmpty, "\(series) not cleared")
+        }
+    }
 }
-
-

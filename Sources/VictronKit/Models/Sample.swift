@@ -121,6 +121,12 @@ public final class RollingBuffer {
         let samples = Array(oneHourBuffer)
         return RollingWindow(samples: samples)
     }
+
+    /// Clear all samples from both buffers
+    public func clear() {
+        fiveMinuteBuffer.removeAll()
+        oneHourBuffer.removeAll()
+    }
     
     /// Trim old samples from 5-minute buffer based on the current timestamp
     /// - Parameter currentTimestamp: The current timestamp

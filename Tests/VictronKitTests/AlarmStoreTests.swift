@@ -247,4 +247,32 @@ final class AlarmStoreTests: XCTestCase {
         XCTAssertEqual(alarm?.id, "vebus/276/L1/Overload")
         XCTAssertEqual(alarm?.name, "L1/Overload")
     }
+
+    func testResetClearsAlarmsAndLog() throws {
+        let store = AlarmStore(now: { Date(timeIntervalSince1970: 1000000) })
+        
+        // Add some alarms
+        let topic1 = "N/test/battery/279/Alarms/LowSoc"
+        let payload1 = ["value": 2]
+        let payloadData1 = try JSONSerialization.data(withJSONObject: payload1)
+        store.handle(topic: topic1, payload: payloadData1)
+        
+        let topic2 = "N/test/vebus/276/Alarms/L1/Overload"
+        let payload2 = ["value": 1]
+        let payloadData2 = try JSONSerialization.data(withJSONObject: payload2)
+        store.handle(topic: topic2, payload: payloadData2)
+        
+        // Verify alarms are present
+        XCTAssertEqual(store.alarms.count, 2)
+        XCTAssertEqual(store.active.count, 2)
+        XCTAssertEqual(store.log.count, 2)
+        
+        // Reset the store
+        store.reset()
+        
+        // Verify everything is cleared
+        XCTAssertTrue(store.alarms.isEmpty)
+        XCTAssertTrue(store.active.isEmpty)
+        XCTAssertTrue(store.log.isEmpty)
+    }
 }

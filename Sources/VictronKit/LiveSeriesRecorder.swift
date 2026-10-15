@@ -57,6 +57,13 @@ public final class LiveSeriesRecorder: ObservableObject {
     public func buffer(for series: LiveSeries) -> RollingBuffer {
         return buffers[series] ?? RollingBuffer()
     }
+
+    /// Reset all recording buffers, clearing recorded data
+    public func reset() {
+        for series in LiveSeries.allCases {
+            buffers[series]?.clear()
+        }
+    }
     
     /// Record current values from the store
     public func record() {
