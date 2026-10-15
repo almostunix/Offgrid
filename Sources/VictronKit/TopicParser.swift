@@ -95,7 +95,8 @@ public final class TopicParser {
         }
         
         // Portal ID and service must not be empty or contain wildcards
-        guard parts[1] != "", parts[2] != "", !parts[1].contains("+"), !parts[1].contains("#") else {
+        guard parts[1] != "", parts[2] != "", !parts[1].contains("+"), !parts[1].contains("#"),
+              !parts[2].contains("+"), !parts[2].contains("#") else {   // no wildcards in portal or service (found by T-34 fuzzing)
             return nil
         }
         
