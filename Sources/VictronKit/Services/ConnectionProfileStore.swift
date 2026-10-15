@@ -261,6 +261,7 @@ public final class ConnectionProfileStore: ConnectionProfileStoring {
         existingProfile.username = profile.username
         existingProfile.portalId = profile.portalId
         existingProfile.lastUsed = profile.lastUsed
+        existingProfile.pinnedCertificateSHA256 = profile.pinnedCertificateSHA256
         
         try saveProfileToDisk(existingProfile)
     }

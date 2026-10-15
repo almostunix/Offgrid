@@ -17,6 +17,12 @@ struct ConnectScreen: View {
                         // Connection status
                         Section {
                             ConnectionStatusView(state: viewModel.connectionState, portalId: viewModel.portalId)
+                            
+                            if viewModel.certificateChanged {
+                                Label("This Cerbo's certificate has changed since you trusted it. The app will not connect. If you replaced or reset the Cerbo, delete this connection and add it again.", systemImage: "exclamationmark.shield.fill")
+                                    .foregroundStyle(.red)
+                                    .font(.callout)
+                            }
                         }
 
                         // Saved connections
@@ -118,6 +124,19 @@ struct ConnectScreen: View {
                     viewModel.updateProfile(updatedProfile)
                     selectedProfile = nil
                 })
+            }
+            .sheet(isPresented: $viewModel.showingTrustPrompt) {
+                if let host = viewModel.trustPromptHost, 
+                   let port = viewModel.trustPromptPort, 
+                   let fingerprint = viewModel.trustPromptFingerprint {
+                    TrustPromptView(
+                        host: host,
+                        port: port,
+                        fingerprint: fingerprint,
+                        onTrust: { viewModel.trustAndConnect() },
+                        onCancel: { viewModel.cancelTrustPrompt() }
+                    )
+                }
             }
             .onAppear {
                 viewModel.loadProfiles()
@@ -269,6 +288,15 @@ class ConnectViewModel: ObservableObject {
     @Published var password: String = ""
     @Published var connectedProfile: ConnectionProfile?
     @Published var isDemo = false
+    @Published var trustPromptHost: String?
+    @Published var trustPromptPort: Int?
+    @Published var trustPromptFingerprint: String?
+    @Published var trustPromptProfile: ConnectionProfile?
+    @Published var showingTrustPrompt = false
+
+    var certificateChanged: Bool {
+        connectionState == .failed(.untrustedCertificate)
+    }
 
     /// Live data store for the connected Cerbo GX
     let liveDataStore = LiveDataStore()
@@ -334,19 +362,44 @@ class ConnectViewModel: ObservableObject {
 
     func connect(to profile: ConnectionProfile) {
         disconnect()
-        do {
-            let password = try profileStore.password(for: profile)
-            connectionManager = try ConnectionManager(profile: profile, liveDataStore: liveDataStore, password: password)
-            setupConnectionManagerCallbacks()
-            connectionManager?.connect()
-            connectedProfile = profile
-            var updatedProfile = profile
-            updatedProfile.markAsLastUsed()
-            try profileStore.updateProfile(updatedProfile, password: nil)
-            loadProfiles()
-        } catch {
-            print("Failed to connect: " + error.localizedDescription)
-            connectionState = .failed(.unknown(error.localizedDescription))
+        
+        if needsTrustPrompt(for: profile) {
+            // Show trust prompt
+            trustPromptProfile = profile
+            
+            // Fetch server fingerprint
+            guard let port = UInt16(exactly: profile.port), port > 0 else { connectionState = .failed(.invalidPort(profile.port)); return }
+            ConnectionManager.fetchServerFingerprint(host: profile.host, port: port) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let fingerprint):
+                        self?.trustPromptFingerprint = fingerprint
+                        self?.trustPromptHost = profile.host
+                        self?.trustPromptPort = profile.port
+                        self?.showingTrustPrompt = true
+                    case .failure(let error):
+                        print("Failed to fetch server fingerprint: " + error.localizedDescription)
+                        self?.trustPromptProfile = nil
+                        self?.connectionState = .failed(error)
+                    }
+                }
+            }
+        } else {
+            // No trust prompt needed, connect directly
+            do {
+                let password = try profileStore.password(for: profile)
+                connectionManager = try ConnectionManager(profile: profile, liveDataStore: liveDataStore, password: password)
+                setupConnectionManagerCallbacks()
+                connectionManager?.connect()
+                connectedProfile = profile
+                var updatedProfile = profile
+                updatedProfile.markAsLastUsed()
+                try profileStore.updateProfile(updatedProfile, password: nil)
+                loadProfiles()
+            } catch {
+                print("Failed to connect: " + error.localizedDescription)
+                connectionState = .failed(.unknown(error.localizedDescription))
+            }
         }
     }
 
@@ -377,6 +430,47 @@ class ConnectViewModel: ObservableObject {
         connectionState = .idle
         portalId = nil
         connectedProfile = nil
+    }
+
+    func trustAndConnect() {
+        guard let profile = trustPromptProfile, let fingerprint = trustPromptFingerprint else { return }
+        
+        // Update profile with pinned certificate
+        var updatedProfile = profile
+        updatedProfile.pinnedCertificateSHA256 = fingerprint
+        updatedProfile.markAsLastUsed()
+        
+        do {
+            try profileStore.updateProfile(updatedProfile, password: nil)
+            loadProfiles()
+            
+            // Connect with the updated profile
+            let password = try profileStore.password(for: updatedProfile)
+            connectionManager = try ConnectionManager(profile: updatedProfile, liveDataStore: liveDataStore, password: password)
+            setupConnectionManagerCallbacks()
+            connectionManager?.connect()
+            connectedProfile = updatedProfile
+            
+            // Clear trust prompt state
+            resetTrustPrompt()
+        } catch {
+            print("Failed to connect after trust: " + error.localizedDescription)
+            connectionState = .failed(.unknown(error.localizedDescription))
+            resetTrustPrompt()
+        }
+    }
+
+    func cancelTrustPrompt() {
+        resetTrustPrompt()
+        connectionState = .idle
+    }
+
+    private func resetTrustPrompt() {
+        trustPromptHost = nil
+        trustPromptPort = nil
+        trustPromptFingerprint = nil
+        trustPromptProfile = nil
+        showingTrustPrompt = false
     }
 
     func startDemo() {

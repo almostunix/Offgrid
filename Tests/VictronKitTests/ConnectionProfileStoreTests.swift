@@ -241,6 +241,36 @@ final class ConnectionProfileStoreTests: XCTestCase {
         XCTAssertEqual(retrievedPassword, "originalpass")
     }
     
+    func testUpdateSavesPinnedCertificate() throws {
+        // Create and save a profile with password
+        let profile = ConnectionProfile(
+            name: "Test Cerbo",
+            host: "192.168.1.100",
+            port: 1883,
+            useTLS: true,
+            username: "user"
+        )
+        
+        try profileStore.save(profile, password: "pw")
+        
+        // Update the profile with pinned certificate but no password
+        var updatedProfile = profile
+        updatedProfile.pinnedCertificateSHA256 = String(repeating: "ab", count: 32)
+        
+        try profileStore.updateProfile(updatedProfile, password: nil)
+        
+        // Load all profiles and verify the pin is saved
+        let allProfiles = try profileStore.loadAllProfiles()
+        let loadedProfile = allProfiles.first { $0.id == profile.id }
+        
+        XCTAssertNotNil(loadedProfile)
+        XCTAssertEqual(loadedProfile?.pinnedCertificateSHA256, String(repeating: "ab", count: 32))
+        
+        // Verify password is still retrievable
+        let retrievedPassword = try profileStore.password(for: loadedProfile!)
+        XCTAssertEqual(retrievedPassword, "pw")
+    }
+    
     func testDeleteProfile() throws {
         // Create and save a profile
         let profile = ConnectionProfile(
