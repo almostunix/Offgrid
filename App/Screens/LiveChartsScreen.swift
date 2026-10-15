@@ -72,6 +72,11 @@ public struct LiveChartsScreen: View {
         }
         .navigationTitle("Live Charts")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ShareLink(item: CSVDocument.live(recorder: recorder, timeRange: timeRange), preview: SharePreview("Live data CSV")) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+        }
     }
 }
 

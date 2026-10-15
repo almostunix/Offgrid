@@ -66,6 +66,15 @@ public struct EnergyHistoryScreen: View {
         }
         .navigationTitle("Energy History")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if let portalId = portalId, let firstInstance = getFirstSolarChargerInstance() {
+                let start = Calendar.current.date(byAdding: .day, value: -(lastDays - 1), to: Calendar.current.startOfDay(for: Date())) ?? .distantPast
+                let days = historyCache.days(portalId: portalId, instance: firstInstance).filter { $0.date >= start }
+                ShareLink(item: CSVDocument.history(days), preview: SharePreview("Solar history CSV")) {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                }
+            }
+        }
     }
     
     private var dataSourceCaption: String {
