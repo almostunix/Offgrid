@@ -1,6 +1,6 @@
 # Offgrid style guide: "Night" v1 (direction B, chosen 2026-10-15)
 
-Dark, high-contrast and calm: a near-black ground, rounded tiles or hairline-divided rows, big tabular numbers and one accent per energy source. Reference mockups: direction B on the first style canvas, and the refined Night screens (first screen/scan, overview, power flow) on the second. This is the current design (v1); a v2 may follow later. Change this file first, then the code.
+Dark, high-contrast and calm: a near-black ground, rounded tiles or hairline-divided rows, big tabular numbers and one accent per energy source. Reference mockups: direction B on the first style canvas, and the refined Night screens (first screen/scan, overview, power flow, bottom row) on https://claude.ai/artifact/8a2sXs1HWViatjkVaDq6mi (Dontonio's private canvas). This is the current design (v1); a v2 may follow later. Change this file first, then the code.
 
 ## Colors (`App/Theme/OffgridTheme.swift`)
 
