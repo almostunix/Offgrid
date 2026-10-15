@@ -78,18 +78,18 @@ public struct DeviceListRow: View {
             // Power/SOC display
             if let power = device.power {
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("\\(\"%.0f W\", power)")
+                    Text(String(format: "%.0f W", power))
                         .font(.subheadline)
                         .monospacedDigit()
                     
                     if let soc = device.soc {
-                        Text("\\(\"%.0f%%\", soc)")
+                        Text(String(format: "%.0f%%", soc))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
             } else if let soc = device.soc {
-                Text("\\(\"%.0f%%\", soc)")
+                Text(String(format: "%.0f%%", soc))
                     .font(.subheadline)
                     .monospacedDigit()
             }

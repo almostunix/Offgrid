@@ -74,14 +74,14 @@ private struct DeviceHeader: View {
                 if let power = device.power {
                     HStack(spacing: 16) {
                         if let soc = device.soc {
-                            MetricView(label: "Power", value: "\\(\"%.0f W\", power)")
-                            MetricView(label: "SOC", value: "\\(\"%.0f%%\", soc)")
+                            MetricView(label: "Power", value: String(format: "%.0f W", power))
+                            MetricView(label: "SOC", value: String(format: "%.0f%%", soc))
                         } else {
-                            MetricView(label: "Power", value: "\\(\"%.0f W\", power)")
+                            MetricView(label: "Power", value: String(format: "%.0f W", power))
                         }
                     }
                 } else if let soc = device.soc {
-                    MetricView(label: "SOC", value: "\\(\"%.0f%%\", soc)")
+                    MetricView(label: "SOC", value: String(format: "%.0f%%", soc))
                 }
             }
             
@@ -117,15 +117,15 @@ private struct BatteryDetailView: View {
             // Main metrics
             HStack(spacing: 16) {
                 if let voltage = battery.voltage {
-                    MetricView(label: "Voltage", value: "\\(\"%.1f V\", voltage)")
+                    MetricView(label: "Voltage", value: String(format: "%.1f V", voltage))
                 }
                 
                 if let current = battery.current {
-                    MetricView(label: "Current", value: "\\(\"%.1f A\", current)")
+                    MetricView(label: "Current", value: String(format: "%.1f A", current))
                 }
                 
                 if let power = battery.power {
-                    MetricView(label: "Power", value: "\\(\"%.0f W\", power)")
+                    MetricView(label: "Power", value: String(format: "%.0f W", power))
                 }
             }
             
@@ -134,7 +134,7 @@ private struct BatteryDetailView: View {
             // Additional metrics
             HStack(spacing: 16) {
                 if let soc = battery.soc {
-                    MetricView(label: "State of Charge", value: "\\(\"%.0f%%\", soc)")
+                    MetricView(label: "State of Charge", value: String(format: "%.0f%%", soc))
                 }
                 
                 if let timeToGo = battery.timeToGo {
@@ -142,7 +142,7 @@ private struct BatteryDetailView: View {
                 }
                 
                 if let consumed = battery.consumedAmphours {
-                    MetricView(label: "Consumed", value: "\\(\"%.1f Ah\", consumed)")
+                    MetricView(label: "Consumed", value: String(format: "%.1f Ah", consumed))
                 }
             }
         }
@@ -152,7 +152,7 @@ private struct BatteryDetailView: View {
     private func formattedTime(_ seconds: Double) -> String {
         let hours = Int(seconds) / 3600
         let minutes = Int(seconds) % 3600 / 60
-        return "\\(\"%.0dh %.0dm\", hours, minutes)"
+        return String(format: "%dh %dm", hours, minutes)
     }
 }
 
@@ -165,15 +165,15 @@ private struct SolarChargerDetailView: View {
             // Main metrics
             HStack(spacing: 16) {
                 if let pvVoltage = solarCharger.pvVoltage {
-                    MetricView(label: "PV Voltage", value: "\\(\"%.1f V\", pvVoltage)")
+                    MetricView(label: "PV Voltage", value: String(format: "%.1f V", pvVoltage))
                 }
                 
                 if let dcVoltage = solarCharger.dcVoltage {
-                    MetricView(label: "DC Voltage", value: "\\(\"%.1f V\", dcVoltage)")
+                    MetricView(label: "DC Voltage", value: String(format: "%.1f V", dcVoltage))
                 }
                 
                 if let dcCurrent = solarCharger.dcCurrent {
-                    MetricView(label: "DC Current", value: "\\(\"%.1f A\", dcCurrent)")
+                    MetricView(label: "DC Current", value: String(format: "%.1f A", dcCurrent))
                 }
             }
             
@@ -182,7 +182,7 @@ private struct SolarChargerDetailView: View {
             // Additional metrics
             HStack(spacing: 16) {
                 if let yieldPower = solarCharger.yieldPower {
-                    MetricView(label: "Yield Power", value: "\\(\"%.0f W\", yieldPower)")
+                    MetricView(label: "Yield Power", value: String(format: "%.0f W", yieldPower))
                 }
                 
                 if let state = solarCharger.state {
@@ -217,11 +217,11 @@ private struct InverterDetailView: View {
             // Main metrics
             HStack(spacing: 16) {
                 if let acInputPower = inverter.acInputPower {
-                    MetricView(label: "AC Input", value: "\\(\"%.0f W\", acInputPower)")
+                    MetricView(label: "AC Input", value: String(format: "%.0f W", acInputPower))
                 }
                 
                 if let acOutputPower = inverter.acOutputPower {
-                    MetricView(label: "AC Output", value: "\\(\"%.0f W\", acOutputPower)")
+                    MetricView(label: "AC Output", value: String(format: "%.0f W", acOutputPower))
                 }
             }
             

@@ -349,7 +349,7 @@ public struct DeviceListPreview: View {
             }
             
             if DeviceListModel.rows(from: store).count > 3 {
-                Text("\\(\"+\" + String(DeviceListModel.rows(from: store).count - 3) + \" more devices\")")
+                Text("+" + String(DeviceListModel.rows(from: store).count - 3) + " more devices")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .trailing)
