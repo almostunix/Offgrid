@@ -10,7 +10,7 @@ final class TestBroker {
     private var configFileURL: URL?
     private var configDirURL: URL?
     private var _caCertificateURL: URL?
-    private var serverCertificateURL: URL?
+    var serverCertificateURL: URL?
     private var serverKeyURL: URL?
     private var passwordFileURL: URL?
     private let mqttBinaryPath = "/opt/homebrew/sbin/mosquitto"

@@ -10,6 +10,8 @@
 
 import Foundation
 import CocoaMQTT
+import Security
+import CryptoKit
 
 public enum ConnectionState: Equatable {
     case idle
@@ -23,6 +25,7 @@ public enum ConnectionError: Error, Equatable {
     case invalidPort(Int)
     case connectionRefused
     case authenticationFailed
+    case untrustedCertificate
     case unknown(String)
 }
 
@@ -50,6 +53,7 @@ public final class ConnectionManager {
     private var keepaliveTimer: DispatchSourceTimer?
     private var sentFirstKeepalive = false
     private var userDisconnect = false
+    private var trustRejected = false   // set when the pinned certificate didn't match (only touched on `queue`)
     private var fullPublishCompleted = false
 
     /// - Parameters:
@@ -67,9 +71,34 @@ public final class ConnectionManager {
         mqtt.autoReconnect = true                 // CocoaMQTT backs off exponentially up to the cap
         mqtt.autoReconnectTimeInterval = 1        // seconds (UInt16)
         mqtt.maxAutoReconnectTimeInterval = 30
-        mqtt.enableSSL = profile.useTLS           // certificate pinning comes with T-35
+        mqtt.enableSSL = profile.useTLS
         mqtt.username = profile.username
         mqtt.password = password
+        
+        // Certificate pinning setup
+        if profile.useTLS {
+            if let pin = profile.pinnedCertificateSHA256 {
+                mqtt.manuallyEvaluateTrust = true
+                mqtt.didReceiveTrust = { [weak self] mqtt, trust, completionHandler in
+                    guard let self = self else { return completionHandler(false) }
+                    guard let certificateChain = SecTrustCopyCertificateChain(trust) as? [SecCertificate], 
+                          let certificate = certificateChain.first else {
+                        return completionHandler(false)
+                    }
+                    let fingerprint = Self.sha256Fingerprint(of: certificate)
+                    let matches = fingerprint == pin
+                    if !matches {
+                        mqtt.autoReconnect = false                       // a wrong certificate won't fix itself
+                        self.queue.async { self.trustRejected = true }
+                    }
+                    completionHandler(matches)
+                }
+            } else {
+                // TLS enabled but no pin provided - refuse connection
+                throw ConnectionError.untrustedCertificate
+            }
+        }
+        
         if let known = profile.portalId { try usePortalId(known) }
         setUpCallbacks()
     }
@@ -117,7 +146,9 @@ public final class ConnectionManager {
         mqtt.didDisconnect = { [weak self] _, _ in
             guard let self = self else { return }
             self.stopKeepalive()
-            if self.userDisconnect { self.state = .idle } else { self.state = .reconnecting }   // CocoaMQTT retries
+            if self.userDisconnect { self.state = .idle }
+            else if self.trustRejected { self.state = .failed(.untrustedCertificate) }
+            else { self.state = .reconnecting }   // CocoaMQTT retries
         }
     }
 
@@ -186,5 +217,14 @@ public final class ConnectionManager {
                 try? publisher.publish(topic: "R/" + id + "/battery/" + instance + "/History", payload: "")
             }
         }
+    }
+
+    /// Compute SHA-256 fingerprint of a certificate as a hex string
+    /// - Parameter cert: The certificate to hash
+    /// - Returns: Hex string representation of the SHA-256 hash
+    public static func sha256Fingerprint(of cert: SecCertificate) -> String {
+        let data = SecCertificateCopyData(cert) as Data
+        let hash = Data(SHA256.hash(data: data))
+        return hash.map { String(format: "%02x", $0) }.joined()
     }
 }

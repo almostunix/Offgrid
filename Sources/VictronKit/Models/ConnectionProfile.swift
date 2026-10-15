@@ -23,6 +23,9 @@ public struct ConnectionProfile: Codable, Equatable, Identifiable {
     /// Whether to use TLS
     public var useTLS: Bool
     
+    /// SHA-256 fingerprint of the pinned certificate (hex string) for TLS certificate pinning
+    public var pinnedCertificateSHA256: String?
+    
     /// MQTT username (optional)
     public var username: String?
     
@@ -48,13 +51,15 @@ public struct ConnectionProfile: Codable, Equatable, Identifiable {
     ///   - port: MQTT port
     ///   - useTLS: Whether to use TLS
     ///   - username: MQTT username (optional)
-    public init(name: String, host: String, port: Int, useTLS: Bool, username: String? = nil) {
+    ///   - pinnedCertificateSHA256: SHA-256 fingerprint of the pinned certificate for TLS (optional)
+    public init(name: String, host: String, port: Int, useTLS: Bool, username: String? = nil, pinnedCertificateSHA256: String? = nil) {
         self.id = UUID()
         self.name = name
         self.host = host
         self.port = port
         self.useTLS = useTLS
         self.username = username
+        self.pinnedCertificateSHA256 = pinnedCertificateSHA256
         self.passwordKeychainReference = nil
         self.portalId = nil
         self.lastUsed = nil
@@ -75,7 +80,8 @@ public struct ConnectionProfile: Codable, Equatable, Identifiable {
     ///   - lastUsed: Last used date (optional)
     ///   - createdAt: Creation date
     ///   - updatedAt: Last update date
-    public init(id: UUID, name: String, host: String, port: Int, useTLS: Bool, username: String?, passwordKeychainReference: String?, portalId: String?, lastUsed: Date?, createdAt: Date, updatedAt: Date) {
+    ///   - pinnedCertificateSHA256: SHA-256 fingerprint of the pinned certificate for TLS (optional)
+    public init(id: UUID, name: String, host: String, port: Int, useTLS: Bool, username: String?, passwordKeychainReference: String?, portalId: String?, lastUsed: Date?, createdAt: Date, updatedAt: Date, pinnedCertificateSHA256: String? = nil) {
         self.id = id
         self.name = name
         self.host = host
@@ -87,6 +93,7 @@ public struct ConnectionProfile: Codable, Equatable, Identifiable {
         self.lastUsed = lastUsed
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.pinnedCertificateSHA256 = pinnedCertificateSHA256
     }
     
     /// Update the profile's metadata
