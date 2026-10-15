@@ -227,4 +227,41 @@ public final class ConnectionManager {
         let hash = Data(SHA256.hash(data: data))
         return hash.map { String(format: "%02x", $0) }.joined()
     }
+
+    /// Fetch the server's TLS certificate fingerprint without establishing a full connection
+    /// - Parameters:
+    ///   - host: The host to connect to
+    ///   - port: The port to connect to
+    ///   - timeout: Connection timeout in seconds (default: 5)
+    ///   - completion: Called with the SHA-256 fingerprint or error
+    /// Trust on first use: opens a TLS connection only far enough to read the server certificate, returns its
+    /// SHA-256 fingerprint and refuses the connection (nothing is ever sent over MQTT). All bookkeeping happens on
+    /// one serial queue, and the client is kept alive until the result is delivered.
+    public static func fetchServerFingerprint(host: String, port: UInt16, timeout: TimeInterval = 5,
+                                              completion: @escaping (Result<String, ConnectionError>) -> Void) {
+        let queue = DispatchQueue(label: "VictronKit.fingerprint")
+        let mqtt = CocoaMQTT(clientID: "VictronKit-fingerprint-" + UUID().uuidString, host: host, port: port)
+        mqtt.enableSSL = true
+        mqtt.manuallyEvaluateTrust = true
+        mqtt.autoReconnect = false
+        mqtt.delegateQueue = queue
+        var client: CocoaMQTT? = mqtt          // strong reference until we finish
+        var done = false
+        func finish(_ result: Result<String, ConnectionError>) {   // only called on `queue`
+            guard !done else { return }
+            done = true
+            client?.disconnect()
+            client = nil
+            completion(result)
+        }
+        mqtt.didReceiveTrust = { _, trust, completionHandler in
+            completionHandler(false)           // never actually connect
+            let leaf = (SecTrustCopyCertificateChain(trust) as? [SecCertificate])?.first
+            queue.async { finish(leaf.map { .success(sha256Fingerprint(of: $0)) } ?? .failure(.connectionRefused)) }
+        }
+        mqtt.didConnectAck = { _, _ in finish(.failure(.connectionRefused)) }   // must not happen
+        mqtt.didDisconnect = { _, _ in queue.asyncAfter(deadline: .now() + 0.1) { finish(.failure(.connectionRefused)) } }
+        queue.asyncAfter(deadline: .now() + timeout) { finish(.failure(.connectionRefused)) }
+        queue.async { _ = client?.connect() }
+    }
 }
