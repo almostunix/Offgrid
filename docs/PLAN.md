@@ -248,3 +248,6 @@ Standing rule from the user: don't reinvent the wheel. Use an established open-s
 
 ## Decision: minimum iOS 17 (T-7, 2026-10-14)
 The user chose iOS 17+. Swift Charts' built-in zoom, pan and scrub (`chartScrollableAxes`, `chartXSelection`) and SwiftData need it. Package.swift declares `.iOS(.v17)` and `.macOS(.v14)` (macOS 14 so `swift test` runs on the Mac with the same APIs). T-19's project.yml must use `deploymentTarget: iOS: "17.0"`.
+
+## Victron alarms (checked 2026-10-15, Venus D-Bus wiki)
+battery and vebus publish alarms as `<service>/<instance>/Alarms/<Name>` with 0 = OK, 1 = warning, 2 = alarm. Battery: LowVoltage, HighVoltage, HighCellVoltage, LowCellVoltage, LowStarterVoltage, HighStarterVoltage, LowSoc, HighChargeCurrent, HighDischargeCurrent, HighCurrent, CellImbalance, InternalFailure, HighChargeTemperature, LowChargeTemperature, LowTemperature, HighTemperature, HighInternalTemperature, MidVoltage, Contactor, BmsCable, FuseBlown (`Alarms/Alarm` is deprecated and ignored by the GUI and VRM, so ignore it too). VE.Bus: HighDcCurrent, HighDcVoltage, LowBattery, PhaseRotation, Ripple, TemperatureSensor, plus per phase `Alarms/L1|L2|L3/HighTemperature|LowBattery|Overload|Ripple`. Solar chargers have no /Alarms paths (only /ErrorCode). Fixture: Tests/VictronKitTests/Fixtures/alarms.json (made up from these paths).
