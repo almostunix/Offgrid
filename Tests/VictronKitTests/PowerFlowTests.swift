@@ -13,10 +13,11 @@ final class PowerFlowTests: XCTestCase {
 
     func testChargingScenario() {
         // Scenario: Solar producing 1250W, battery charging at 600W, loads consuming 400W
-        // Expected flows:
-        // - Solar (1250W) -> Battery (600W)
-        // - Inverter (600W) -> Battery (600W) [charging]
+        // Expected flows with DC bus model:
+        // - Solar (600W) -> Battery (showing actual charging amount)
         // - Inverter (400W) -> Loads (400W)
+        // - Solar (650W) -> Inverter (the rest of the solar)
+        // - NO inverter -> battery flow (solar is providing the charging current)
         let system = SystemModel(
             batteryPower: 600.0,
             pvPower: 1250.0,
@@ -28,19 +29,18 @@ final class PowerFlowTests: XCTestCase {
         
         XCTAssertEqual(flows.count, 3)
         
-        // Check solar to battery flow
+        // Check solar to battery flow (should show charging amount, not full solar)
         if let solarFlow = flows.first(where: { $0.from == .solar && $0.to == .battery }) {
-            XCTAssertEqual(solarFlow.watts, 1250.0)
+            XCTAssertEqual(solarFlow.watts, 600.0)
         } else {
             XCTFail("Expected solar to battery flow not found")
         }
         
-        // Check inverter to battery flow (charging)
-        if let chargeFlow = flows.first(where: { $0.from == .inverter && $0.to == .battery }) {
-            XCTAssertEqual(chargeFlow.watts, 600.0)
-        } else {
-            XCTFail("Expected inverter to battery flow not found")
-        }
+        XCTAssertEqual(flows.first(where: { $0.from == .solar && $0.to == .inverter })?.watts, 650.0)
+
+        // Check that there's NO inverter to battery flow (this was the bug)
+        let inverterToBatteryFlows = flows.filter { $0.from == .inverter && $0.to == .battery }
+        XCTAssertEqual(inverterToBatteryFlows.count, 0, "Should not have inverter to battery flow when solar is charging")
         
         // Check inverter to loads flow
         if let loadFlow = flows.first(where: { $0.from == .inverter && $0.to == .loads }) {
@@ -133,26 +133,27 @@ final class PowerFlowTests: XCTestCase {
         
         let flows = PowerFlowModel.flows(from: store.system)
         
-        // Expected flows:
-        // - Solar (1250W) -> Battery (1250W)
-        // - Inverter (66.56W) -> Battery (66.56W) [charging]
+        // Expected flows with DC bus model:
+        // - Solar (66.56W) -> Battery (showing actual charging amount, not full solar)
         // - Inverter (1500W) -> Loads (1500W)
+        // - NO inverter -> battery flow (this was the bug)
         
         XCTAssertEqual(flows.count, 3)
         
-        // Check solar to battery flow
+        // Check solar to battery flow (should show charging amount, not full solar)
         if let solarFlow = flows.first(where: { $0.from == .solar && $0.to == .battery }) {
-            XCTAssertEqual(solarFlow.watts, 1250.0, "Solar to battery flow should be 1250W")
+            XCTAssertEqual(solarFlow.watts, 66.56, "Solar to battery flow should show charging amount 66.56W, not full solar 1250W")
         } else {
             XCTFail("Expected solar to battery flow not found")
         }
         
-        // Check inverter to battery flow (charging)
-        if let chargeFlow = flows.first(where: { $0.from == .inverter && $0.to == .battery }) {
-            XCTAssertEqual(chargeFlow.watts, 66.56, "Inverter to battery flow should be 66.56W")
-        } else {
-            XCTFail("Expected inverter to battery flow not found")
-        }
+        // The rest of the solar (1250 - 66.56) goes to the inverter, which is inverting
+        XCTAssertEqual(flows.first(where: { $0.from == .solar && $0.to == .inverter })?.watts ?? 0, 1250.0 - 66.56, accuracy: 0.001)
+        XCTAssertEqual(PowerFlowModel.dcToInverter(from: store.system), 1250.0 - 66.56, accuracy: 0.001)
+
+        // Check that there's NO inverter to battery flow (this was the bug)
+        let inverterToBatteryFlows = flows.filter { $0.from == .inverter && $0.to == .battery }
+        XCTAssertEqual(inverterToBatteryFlows.count, 0, "Should not have inverter to battery flow when solar is charging")
         
         // Check inverter to loads flow
         if let loadFlow = flows.first(where: { $0.from == .inverter && $0.to == .loads }) {
@@ -163,6 +164,29 @@ final class PowerFlowTests: XCTestCase {
     }
 
     // MARK: - Helper Methods
+
+    // MARK: - DC side split (T-63)
+
+    private func watts(_ flows: [PowerFlow]) -> [String: Double] {
+        Dictionary(uniqueKeysWithValues: flows.map { ($0.from.rawValue + ">" + $0.to.rawValue, $0.watts) })
+    }
+
+    func testChargingFromACWithoutSolar() {
+        let flows = PowerFlowModel.flows(from: SystemModel(batteryPower: 500, pvPower: 0, acConsumptionOnOutput: 0, acConsumptionOnInput: 0))
+        XCTAssertEqual(watts(flows), ["inverter>battery": 500])
+        XCTAssertEqual(PowerFlowModel.dcToInverter(from: SystemModel(batteryPower: 500, pvPower: 0)), -500)
+    }
+
+    func testSolarCoversPartOfTheCharging() {
+        let flows = PowerFlowModel.flows(from: SystemModel(batteryPower: 500, pvPower: 200, acConsumptionOnOutput: 0, acConsumptionOnInput: 0))
+        XCTAssertEqual(watts(flows), ["solar>battery": 200, "inverter>battery": 300])
+    }
+
+    func testDischargingWhileSolarProduces() {
+        let flows = PowerFlowModel.flows(from: SystemModel(batteryPower: -400, pvPower: 300, acConsumptionOnOutput: 700, acConsumptionOnInput: 0))
+        XCTAssertEqual(watts(flows), ["solar>inverter": 300, "battery>inverter": 400, "inverter>loads": 700])
+        XCTAssertEqual(PowerFlowModel.dcToInverter(from: SystemModel(batteryPower: -400, pvPower: 300)), 700)
+    }
 
     private func loadSystemFixture() -> [(topic: String, payload: [String: Any])] {
         guard let url = Bundle.module.url(forResource: "system", withExtension: "json", subdirectory: "Fixtures"),

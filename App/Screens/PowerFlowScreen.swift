@@ -47,8 +47,8 @@ public struct PowerFlowScreen: View {
 private struct PowerFlowDiagramView: View {
     @ObservedObject var store: LiveDataStore
     
-    var flows: [PowerFlow] {
-        PowerFlowModel.flows(from: store.system)
+    var dcToInverter: Double {
+        PowerFlowModel.dcToInverter(from: store.system)
     }
     
     var body: some View {
@@ -56,39 +56,21 @@ private struct PowerFlowDiagramView: View {
             // Solar panel at the top
             SolarComponentView(power: store.system.pvPower)
             
-            // Flow from solar to battery
-            if let solarFlow = flows.first(where: { $0.from == .solar && $0.to == .battery }) {
-                FlowIndicatorView(
-                    from: .solar,
-                    to: .battery,
-                    watts: solarFlow.watts,
-                    color: .yellow
-                )
+            // All solar power goes into the DC side (the battery row stands for it)
+            if let pv = store.system.pvPower, pv > 1.0 {
+                FlowIndicatorView(from: .solar, to: .battery, watts: pv, color: .yellow)
             }
-            
-            // Battery in the middle
+
+            // Battery in the middle (its own charge/discharge power is shown on it)
             BatteryComponentView(power: store.system.batteryPower)
-            
-            // Flow from inverter to battery (charging)
-            if let chargeFlow = flows.first(where: { $0.from == .inverter && $0.to == .battery }) {
-                FlowIndicatorView(
-                    from: .inverter,
-                    to: .battery,
-                    watts: chargeFlow.watts,
-                    color: .green
-                )
+
+            // Net DC power between the DC side and the inverter: down = inverting, up = charging from AC
+            if dcToInverter > 1.0 {
+                FlowIndicatorView(from: .battery, to: .inverter, watts: dcToInverter, color: .blue)
+            } else if dcToInverter < -1.0 {
+                FlowIndicatorView(from: .inverter, to: .battery, watts: -dcToInverter, color: .green)
             }
-            
-            // Flow from battery to inverter (discharging)
-            if let dischargeFlow = flows.first(where: { $0.from == .battery && $0.to == .inverter }) {
-                FlowIndicatorView(
-                    from: .battery,
-                    to: .inverter,
-                    watts: dischargeFlow.watts,
-                    color: .blue
-                )
-            }
-            
+
             // Inverter at the bottom
             InverterComponentView(
                 acInputPower: store.system.acConsumptionOnInput,

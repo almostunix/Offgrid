@@ -37,29 +37,26 @@ public struct PowerFlow: Equatable {
 public enum PowerFlowModel {
     /// Calculate all power flows in the system
     public static func flows(from system: SystemModel) -> [PowerFlow] {
+        // DC side (Victron sign: battery power > 0 = charging). Solar charges the battery first and the rest goes to
+        // the inverter; charging beyond what solar gives comes from the inverter (AC charging); a discharging battery
+        // feeds the inverter. Flows under 1 W are not drawn.
+        let pv = max(system.pvPower ?? 0, 0)
+        let battery = system.batteryPower ?? 0
+        let solarToBattery = min(pv, max(battery, 0))
         var flows: [PowerFlow] = []
-        
-        // Solar to battery flow
-        if let pvPower = system.pvPower, pvPower > 1.0 {
-            flows.append(PowerFlow(from: .solar, to: .battery, watts: pvPower))
+        func add(_ from: PowerNode, _ to: PowerNode, _ watts: Double) {
+            if watts > 1.0 { flows.append(PowerFlow(from: from, to: to, watts: watts)) }
         }
-        
-        // Battery flow (charging or discharging)
-        if let batteryPower = system.batteryPower, abs(batteryPower) > 1.0 {
-            if batteryPower > 0 {
-                // Battery is charging: flow from inverter to battery
-                flows.append(PowerFlow(from: .inverter, to: .battery, watts: batteryPower))
-            } else {
-                // Battery is discharging: flow from battery to inverter
-                flows.append(PowerFlow(from: .battery, to: .inverter, watts: abs(batteryPower)))
-            }
-        }
-        
-        // Inverter to loads flow
-        if let acConsumption = system.acConsumptionTotal, acConsumption > 1.0 {
-            flows.append(PowerFlow(from: .inverter, to: .loads, watts: acConsumption))
-        }
-        
+        add(.solar, .battery, solarToBattery)
+        add(.solar, .inverter, pv - solarToBattery)
+        add(.inverter, .battery, max(battery, 0) - solarToBattery)
+        add(.battery, .inverter, max(-battery, 0))
+        add(.inverter, .loads, system.acConsumptionTotal ?? 0)
         return flows
+    }
+
+    /// Net DC power into the inverter (pv - battery): > 0 inverting, < 0 charging from AC.
+    public static func dcToInverter(from system: SystemModel) -> Double {
+        max(system.pvPower ?? 0, 0) - (system.batteryPower ?? 0)
     }
 }
