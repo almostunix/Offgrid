@@ -47,4 +47,33 @@ final class KeychainServiceIntegrationTests: XCTestCase {
         let removedSecret = try keychainService.get(key)
         XCTAssertNil(removedSecret)
     }
+    
+    /// The stored item's attributes, read back from the Keychain.
+    private func attributes(for key: String) throws -> [String: Any] {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: testServiceName,
+            kSecAttrAccount as String: key,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var item: CFTypeRef?
+        XCTAssertEqual(SecItemCopyMatching(query as CFDictionary, &item), errSecSuccess)
+        return try XCTUnwrap(item as? [String: Any])
+    }
+
+    // The macOS test run uses the file-based keychain, which doesn't store kSecAttrAccessible (the
+    // data-protection keychain needs a signed app's entitlement). iOS always uses the data-protection
+    // keychain, so check the attributes every add and update sends, then that items still round-trip.
+    func testEveryItemIsThisDeviceOnly() {
+        let attrs = KeychainService.protectionAttributes
+        XCTAssertEqual(attrs[kSecAttrAccessible as String] as? String, kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String)
+        XCTAssertEqual(attrs[kSecAttrSynchronizable as String] as? Bool, false)
+    }
+
+    func testUpdateKeepsTheSecretReadable() throws {
+        try keychainService.set("test_secret", for: "test_key_update")
+        try keychainService.update("updated_secret", for: "test_key_update")
+        XCTAssertEqual(try keychainService.get("test_key_update"), "updated_secret")
+    }
 }

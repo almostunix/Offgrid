@@ -23,6 +23,12 @@ public final class KeychainService: SecretStore {
     ///   - secret: The secret value to store
     ///   - key: The key to associate with the secret
     /// - Throws: KeychainError if the operation fails
+    /// Added to every stored item: readable only while unlocked, never in backups or iCloud Keychain.
+    static let protectionAttributes: [String: Any] = [
+        kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+        kSecAttrSynchronizable as String: false
+    ]
+
     public func set(_ secret: String, for key: String) throws {
         let secretData = secret.data(using: .utf8)!
         
@@ -30,9 +36,8 @@ public final class KeychainService: SecretStore {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key,
-            kSecValueData as String: secretData,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
-        ]
+            kSecValueData as String: secretData
+        ].merging(Self.protectionAttributes) { $1 }
         
         // Delete any existing item with this key
         SecItemDelete(query as CFDictionary)
@@ -109,7 +114,7 @@ public final class KeychainService: SecretStore {
         
         let attributes: [String: Any] = [
             kSecValueData as String: secretData
-        ]
+        ].merging(Self.protectionAttributes) { $1 }
         
         let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
         
