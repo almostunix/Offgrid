@@ -11,7 +11,7 @@ struct ConnectScreen: View {
         NavigationStack {
             Group {
                 if viewModel.connectionState == .connected {
-                    LiveOverviewScreen(store: viewModel.liveDataStore)
+                    LiveOverviewScreen(store: viewModel.liveDataStore, recorder: viewModel.liveSeriesRecorder)
                 } else {
                     List {
                         // Connection status
@@ -261,6 +261,8 @@ class ConnectViewModel: ObservableObject {
 
     /// Live data store for the connected Cerbo GX
     let liveDataStore = LiveDataStore()
+    /// Records live values for the charts from connect time on (one per connection view model, not per screen).
+    lazy var liveSeriesRecorder = LiveSeriesRecorder(store: liveDataStore)
 
     private var connectionManager: ConnectionManager?
     private var profileStore: ConnectionProfileStoring

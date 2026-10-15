@@ -13,9 +13,13 @@ public struct LiveOverviewScreen: View {
     /// The live data store providing real-time data
     @ObservedObject public var store: LiveDataStore
     
-    // Initialize with data store
-    public init(store: LiveDataStore) {
+    /// Records live values for the charts; shared with the connection so history survives navigation.
+    public let recorder: LiveSeriesRecorder
+
+    // Initialize with data store (previews may omit the recorder)
+    public init(store: LiveDataStore, recorder: LiveSeriesRecorder? = nil) {
         self.store = store
+        self.recorder = recorder ?? LiveSeriesRecorder(store: store)
     }
     
     public var body: some View {
@@ -70,6 +74,16 @@ public struct LiveOverviewScreen: View {
                 // Topic Explorer Section
                 NavigationLink(destination: TopicExplorerScreen(store: store)) {
                     TopicExplorerPreview(store: store)
+                        .padding()
+                        .background(.regularMaterial)
+                        .cornerRadius(16)
+                        .shadow(radius: 3)
+                        .padding(.horizontal)
+                }
+                
+                // Live Charts Section
+                NavigationLink(destination: LiveChartsScreen(store: store, recorder: recorder)) {
+                    LiveChartsPreview(store: store)
                         .padding()
                         .background(.regularMaterial)
                         .cornerRadius(16)
@@ -490,6 +504,55 @@ private struct TopicExplorerPreview: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+    }
+}
+
+/// Live charts preview showing a summary
+private struct LiveChartsPreview: View {
+    @ObservedObject var store: LiveDataStore
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Live Charts")
+                .font(.headline)
+            
+            Text("View real-time data on interactive charts")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            
+            // Show current values
+            HStack(spacing: 32) {
+                // SoC
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("State of Charge")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    
+                    if let soc = store.system.batterySoc {
+                        Text(String(format: "%.1f%%", soc))
+                            .font(.system(size: 24, weight: .semibold))
+                    } else {
+                        Text("-")
+                            .font(.system(size: 24, weight: .semibold))
+                    }
+                }
+                
+                // PV Power
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Solar Input")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    
+                    if let power = store.system.pvPower {
+                        Text(PowerFormatter.formatPower(power))
+                            .font(.system(size: 24, weight: .semibold))
+                    } else {
+                        Text("-")
+                            .font(.system(size: 24, weight: .semibold))
+                    }
+                }
             }
         }
     }
