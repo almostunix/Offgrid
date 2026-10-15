@@ -67,7 +67,7 @@ public final class HistoryStore {
 
         // Handle solar charger daily history
         if service == "solarcharger" && parts[4] == "History" && parts[5] == "Daily" {
-            guard parts.count >= 7 else { return }
+            guard parts.count >= 8 else { return }
             let dayIndex = Int(parts[6])
             let field = String(parts[7])
 
