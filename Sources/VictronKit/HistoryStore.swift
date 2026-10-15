@@ -71,7 +71,7 @@ public final class HistoryStore {
             let dayIndex = Int(parts[6])
             let field = String(parts[7])
 
-            if let dayIndex = dayIndex {
+            if let dayIndex = dayIndex, (0...365).contains(dayIndex) {
                 var days = solarDays[instance] ?? [:]
                 var day = days[dayIndex] ?? SolarDay()
 

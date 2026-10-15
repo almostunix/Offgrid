@@ -131,6 +131,12 @@ public final class LiveDataStore: ObservableObject {
     /// The alarm store for managing Victron alarms
     public let alarmStore = AlarmStore()
     
+    /// Maximum number of distinct topics to keep in memory
+    public static let maxTopics = 5000
+    
+    /// Number of topics that have been dropped due to exceeding maxTopics
+    public private(set) var droppedTopicCount = 0
+    
     /// The detected portal ID
     public private(set) var portalId: String? {
         didSet {
@@ -175,6 +181,9 @@ public final class LiveDataStore: ObservableObject {
     
     /// Publisher for changes
     public let objectWillChange = PassthroughSubject<Void, Never>()
+    
+    /// Private index for fast topic lookup
+    private var topicIndex: [String: Int] = [:]
     
     /// Initialize a new LiveDataStore
     public init() {
@@ -233,9 +242,6 @@ public final class LiveDataStore: ObservableObject {
                 return
             }
             
-            // Track the received topic
-            trackReceivedTopic(topic: topic, payload: jsonDict)
-            
             update(with: message)
         } catch {
             // Malformed JSON is ignored
@@ -267,11 +273,21 @@ public final class LiveDataStore: ObservableObject {
         
         let receivedTopic = ReceivedTopic(topic: topic, rawValue: rawValue, timestamp: Date())
         
-        // Update or add the topic
-        if let index = receivedTopics.firstIndex(where: { $0.topic == topic }) {
+        // Update or add the topic with bounds checking
+        if let index = topicIndex[topic] {
+            // Topic exists - update it
             receivedTopics[index] = receivedTopic
         } else {
+            // Topic doesn't exist - add it if we haven't reached the limit
+            if receivedTopics.count >= Self.maxTopics {
+                // Drop this topic and increment counter
+                droppedTopicCount += 1
+                return
+            }
+            
+            // Add new topic
             receivedTopics.append(receivedTopic)
+            topicIndex[topic] = receivedTopics.count - 1
         }
     }
     
