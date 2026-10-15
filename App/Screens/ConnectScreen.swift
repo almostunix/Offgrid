@@ -9,84 +9,90 @@ struct ConnectScreen: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                // Connection status
-                Section {
-                    ConnectionStatusView(state: viewModel.connectionState, portalId: viewModel.portalId)
-                }
+            Group {
+                if viewModel.connectionState == .connected {
+                    LiveOverviewScreen(store: viewModel.liveDataStore)
+                } else {
+                    List {
+                        // Connection status
+                        Section {
+                            ConnectionStatusView(state: viewModel.connectionState, portalId: viewModel.portalId)
+                        }
 
-                // Saved connections
-                Section(header: Text("Saved Connections")) {
-                    ForEach(viewModel.profiles) { profile in
-                        Button(action: {
-                            viewModel.connect(to: profile)
-                        }) {
+                        // Saved connections
+                        Section(header: Text("Saved Connections")) {
+                            ForEach(viewModel.profiles) { profile in
+                                Button(action: {
+                                    viewModel.connect(to: profile)
+                                }) {
+                                    HStack {
+                                        VStack(alignment: .leading) {
+                                            Text(profile.name)
+                                            Text("Host: \(profile.host):\(profile.port)")
+                                                .font(.caption)
+                                                .foregroundColor(.gray)
+                                        }
+                                        Spacer()
+                                        if viewModel.connectedProfile?.id == profile.id {
+                                            Image(systemName: "checkmark")
+                                                .foregroundColor(.blue)
+                                        }
+                                    }
+                                }
+                                .swipeActions(edge: .trailing) {
+                                    Button(role: .destructive) {
+                                        viewModel.deleteProfile(profile)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+
+                                    Button {
+                                        selectedProfile = profile
+                                        showingEditProfile = true
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    .tint(.blue)
+                                }
+                            }
+
+                            Button(action: { showingAddProfile = true }) {
+                                HStack {
+                                    Image(systemName: "plus")
+                                    Text("Add Connection")
+                                }
+                            }
+                        }
+
+                        // Manual connection
+                        Section(header: Text("Manual Connection")) {
                             HStack {
-                                VStack(alignment: .leading) {
-                                    Text(profile.name)
-                                    Text("Host: \(profile.host):\(profile.port)")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
+                                TextField("Host", text: $viewModel.host)
+                                    .keyboardType(.alphabet)
+                                Button(action: { viewModel.connectManually() }) {
+                                    Text("Connect")
                                 }
-                                Spacer()
-                                if viewModel.connectedProfile?.id == profile.id {
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(.blue)
-                                }
-                            }
-                        }
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                viewModel.deleteProfile(profile)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
+                                .buttonStyle(.borderedProminent)
+                                .disabled(viewModel.host.isEmpty)
                             }
 
-                            Button {
-                                selectedProfile = profile
-                                showingEditProfile = true
-                            } label: {
-                                Label("Edit", systemImage: "pencil")
+                            HStack {
+                                TextField("Port", text: $viewModel.portString)
+                                    .keyboardType(.numberPad)
+                                Toggle("TLS", isOn: $viewModel.useTLS)
                             }
-                            .tint(.blue)
+
+                            if viewModel.useTLS {
+                                Text("TLS connection (requires valid certificate)")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                TextField("Username", text: $viewModel.username)
+                                SecureField("Password", text: $viewModel.password)
+                            }
                         }
-                    }
-
-                    Button(action: { showingAddProfile = true }) {
-                        HStack {
-                            Image(systemName: "plus")
-                            Text("Add Connection")
-                        }
-                    }
-                }
-
-                // Manual connection
-                Section(header: Text("Manual Connection")) {
-                    HStack {
-                        TextField("Host", text: $viewModel.host)
-                            .keyboardType(.alphabet)
-                        Button(action: { viewModel.connectManually() }) {
-                            Text("Connect")
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(viewModel.host.isEmpty)
-                    }
-
-                    HStack {
-                        TextField("Port", text: $viewModel.portString)
-                            .keyboardType(.numberPad)
-                        Toggle("TLS", isOn: $viewModel.useTLS)
-                    }
-
-                    if viewModel.useTLS {
-                        Text("TLS connection (requires valid certificate)")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        TextField("Username", text: $viewModel.username)
-                        SecureField("Password", text: $viewModel.password)
                     }
                 }
             }
@@ -252,6 +258,9 @@ class ConnectViewModel: ObservableObject {
     @Published var password: String = ""
     @Published var connectedProfile: ConnectionProfile?
 
+    /// Live data store for the connected Cerbo GX
+    let liveDataStore = LiveDataStore()
+
     private var connectionManager: ConnectionManager?
     private var profileStore: ConnectionProfileStoring
 
@@ -306,7 +315,6 @@ class ConnectViewModel: ObservableObject {
         disconnect()
         do {
             let password = try profileStore.password(for: profile)
-            let liveDataStore = LiveDataStore()
             connectionManager = try ConnectionManager(profile: profile, liveDataStore: liveDataStore, password: password)
             setupConnectionManagerCallbacks()
             connectionManager?.connect()
@@ -327,7 +335,6 @@ class ConnectViewModel: ObservableObject {
         do {
             let port = Int(portString) ?? 1883
             let profile = ConnectionProfile(name: host, host: host, port: port, useTLS: useTLS, username: username.isEmpty ? nil : username)
-            let liveDataStore = LiveDataStore()
             connectionManager = try ConnectionManager(profile: profile, liveDataStore: liveDataStore, password: password.isEmpty ? nil : password)
             setupConnectionManagerCallbacks()
             connectionManager?.connect()

@@ -5,6 +5,7 @@
 //
 
 import Foundation
+import Combine
 
 /// Represents the system overview data
 public struct SystemModel: Equatable {
@@ -103,21 +104,44 @@ public struct InverterModel: Equatable {
 }
 
 /// Stores parsed MQTT messages and provides typed device models
-public final class LiveDataStore {
+public final class LiveDataStore: ObservableObject {
     /// The detected portal ID
-    public private(set) var portalId: String?
+    public private(set) var portalId: String? {
+        didSet {
+            objectWillChange.send()
+        }
+    }
     
     /// System overview model
-    public private(set) var system: SystemModel = SystemModel()
+    public private(set) var system: SystemModel = SystemModel() {
+        didSet {
+            objectWillChange.send()
+        }
+    }
     
     /// Battery models by device ID
-    public private(set) var batteries: [String: BatteryModel] = [:]
+    public private(set) var batteries: [String: BatteryModel] = [:] {
+        didSet {
+            objectWillChange.send()
+        }
+    }
     
     /// Solar charger models by device ID
-    public private(set) var solarChargers: [String: SolarChargerModel] = [:]
+    public private(set) var solarChargers: [String: SolarChargerModel] = [:] {
+        didSet {
+            objectWillChange.send()
+        }
+    }
     
     /// Inverter models by device ID
-    public private(set) var inverters: [String: InverterModel] = [:]
+    public private(set) var inverters: [String: InverterModel] = [:] {
+        didSet {
+            objectWillChange.send()
+        }
+    }
+    
+    /// Publisher for changes
+    public let objectWillChange = PassthroughSubject<Void, Never>()
     
     /// Initialize a new LiveDataStore
     public init() {
