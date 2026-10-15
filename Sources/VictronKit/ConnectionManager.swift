@@ -55,6 +55,7 @@ public final class ConnectionManager {
     private var sentFirstKeepalive = false
     private var userDisconnect = false
     private var trustRejected = false   // set when the pinned certificate didn't match (only touched on `queue`)
+    private var refused: ConnectionError?   // set when CONNACK is refused (only touched on `queue`)
     private var fullPublishCompleted = false
 
     /// - Parameters:
@@ -107,6 +108,9 @@ public final class ConnectionManager {
     public func connect() {
         queue.async {
             self.userDisconnect = false
+            self.trustRejected = false
+            self.refused = nil
+            self.mqtt.autoReconnect = true
             self.state = .connecting
             _ = self.mqtt.connect()
         }
@@ -131,8 +135,12 @@ public final class ConnectionManager {
                 self.state = .connected
                 mqtt.subscribe(self.portalId.map { "N/\($0)/#" } ?? "N/+/#")
             case .badUsernameOrPassword, .notAuthorized:
+                self.mqtt.autoReconnect = false
+                self.refused = .authenticationFailed
                 self.state = .failed(.authenticationFailed)
             default:
+                self.mqtt.autoReconnect = false
+                self.refused = .connectionRefused
                 self.state = .failed(.connectionRefused)
             }
         }
@@ -149,6 +157,7 @@ public final class ConnectionManager {
             self.stopKeepalive()
             if self.userDisconnect { self.state = .idle }
             else if self.trustRejected { self.state = .failed(.untrustedCertificate) }
+            else if let refused = self.refused { self.state = .failed(refused) }
             else { self.state = .reconnecting }   // CocoaMQTT retries
         }
     }
