@@ -312,6 +312,8 @@ class ConnectViewModel: ObservableObject {
     @Published var showingTrustPrompt = false
     @Published var showingPlaintextWarning = false
     @Published private(set) var isUnencryptedWithPassword = false
+    
+    private var trustAttempt: TrustAttempt?
 
     var certificateChanged: Bool {
         connectionState == .failed(.untrustedCertificate)
@@ -404,7 +406,9 @@ class ConnectViewModel: ObservableObject {
             
             // Check if trust prompt is needed
             if needsTrustPrompt(for: profile) {
-                // Show trust prompt
+                // Create a new trust attempt
+                let attemptId = UUID()
+                trustAttempt = TrustAttempt(id: attemptId, profile: profile)
                 trustPromptProfile = profile
                 
                 // Fetch server fingerprint
@@ -413,13 +417,26 @@ class ConnectViewModel: ObservableObject {
                     DispatchQueue.main.async {
                         switch result {
                         case .success(let fingerprint):
-                            self?.trustPromptFingerprint = fingerprint
-                            self?.trustPromptHost = profile.host
-                            self?.trustPromptPort = profile.port
-                            self?.showingTrustPrompt = true
+                            // Only apply the result if this attempt is still current
+                            guard let self = self, 
+                                  let attempt = self.trustAttempt, 
+                                  attempt.accepts(resultFor: attemptId) else {
+                                return
+                            }
+                            
+                            // Store the fingerprint with the attempt
+                            self.trustAttempt = TrustAttempt(id: attemptId, profile: profile, 
+                                                          fingerprint: fingerprint, 
+                                                          host: profile.host, 
+                                                          port: profile.port)
+                            self.trustPromptFingerprint = fingerprint
+                            self.trustPromptHost = profile.host
+                            self.trustPromptPort = profile.port
+                            self.showingTrustPrompt = true
                         case .failure(let error):
                             print("Failed to fetch server fingerprint: " + error.localizedDescription)
                             self?.trustPromptProfile = nil
+                            self?.trustAttempt = nil
                             self?.connectionState = .failed(error)
                         }
                     }
@@ -488,7 +505,13 @@ class ConnectViewModel: ObservableObject {
     }
 
     func trustAndConnect() {
-        guard let profile = trustPromptProfile, let fingerprint = trustPromptFingerprint else { return }
+        guard let profile = trustPromptProfile, 
+              let attempt = trustAttempt, 
+              let fingerprint = attempt.pin(for: profile) else {
+            // Attempt is stale or host/port changed
+            resetTrustPrompt()
+            return
+        }
         
         // Reset data stores for new connection
         liveDataStore.reset()
@@ -572,6 +595,9 @@ class ConnectViewModel: ObservableObject {
     }
 
     func startDemo() {
+        // Disconnect any existing real connection first
+        disconnect()
+        
         stopDemo()
         
         // Reset data stores for demo
@@ -620,23 +646,33 @@ class ConnectViewModel: ObservableObject {
     }
 
     private func setupConnectionManagerCallbacks() {
+        // Capture the current manager to detect if it's been replaced
+        let manager = connectionManager
+        
         connectionManager?.onStateChange = { [weak self] state in
             DispatchQueue.main.async {
-                self?.connectionState = state
+                // Only process callbacks from the current manager
+                guard let self = self, self.connectionManager === manager else { return }
+                self.connectionState = state
             }
         }
 
         connectionManager?.onPortalIdDetected = { [weak self] portalId in
             DispatchQueue.main.async {
-                self?.portalId = portalId
+                // Only process callbacks from the current manager
+                guard let self = self, self.connectionManager === manager else { return }
+                self.portalId = portalId
             }
         }
         
         connectionManager?.onMessage = { [weak self] topic in
+            // Only process callbacks from the current manager
+            guard let self = self, self.connectionManager === manager else { return }
+            
             // Check if this is a history message
             if topic.contains("/History/") {
                 // Cancel any pending save
-                self?.historySaveWork?.cancel()
+                self.historySaveWork?.cancel()
                 
                 // Schedule a debounced save on main thread
                 let workItem = DispatchWorkItem { [weak self] in
@@ -647,7 +683,7 @@ class ConnectViewModel: ObservableObject {
                 }
                 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
-                self?.historySaveWork = workItem
+                self.historySaveWork = workItem
             }
         }
     }

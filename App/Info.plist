@@ -21,7 +21,7 @@
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Offgrid connects to your Victron Cerbo GX on your local network to show live data.</string>
+	<string>Offgrid looks for your Victron Cerbo GX on your local network and shows its live data.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>
