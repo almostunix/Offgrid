@@ -44,10 +44,10 @@ public struct DeviceListScreen: View {
 }
 
 /// Device list row view
-private struct DeviceListRow: View {
-    let device: DeviceRow
+public struct DeviceListRow: View {
+    public let device: DeviceRow
     
-    var body: some View {
+    public var body: some View {
         HStack {
             // Device icon
             Image(systemName: deviceIcon(for: device.type))

@@ -52,7 +52,7 @@ public struct LiveOverviewScreen: View {
                     .padding(.horizontal)
                 
                 // Devices Section
-                NavigationLink(destination: DeviceListScreen(store: store)) {
+                NavigationLink(destination: DeviceSplitViewScreen(store: store)) {
                     DeviceListPreview(store: store)
                         .padding()
                         .background(.regularMaterial)
