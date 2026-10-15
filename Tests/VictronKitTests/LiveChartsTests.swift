@@ -176,4 +176,104 @@ final class LiveChartsTests: XCTestCase {
         let oneHourWindow = buffer.getOneHourWindow(at: baseDate.addingTimeInterval(600))
         XCTAssertEqual(oneHourWindow.samples.count, 10)
     }
+    
+    func testRollingWindowStatsForInteractiveChart() {
+        let baseDate = Date()
+        let samples = [
+            Sample(timestamp: baseDate, value: 10.0),
+            Sample(timestamp: baseDate.addingTimeInterval(60), value: 20.0),
+            Sample(timestamp: baseDate.addingTimeInterval(120), value: 30.0),
+            Sample(timestamp: baseDate.addingTimeInterval(180), value: 40.0),
+            Sample(timestamp: baseDate.addingTimeInterval(240), value: 50.0)
+        ]
+        
+        let window = RollingWindow(samples: samples)
+        
+        // Test stats used by InteractiveChart
+        XCTAssertEqual(window.min, 10.0, "Min value should be 10.0")
+        XCTAssertEqual(window.max, 50.0, "Max value should be 50.0")
+        XCTAssertEqual(window.avg, 30.0, "Average value should be 30.0")
+        XCTAssertEqual(window.samples.count, 5, "Should have 5 samples")
+    }
+    
+    func testRollingWindowEmptyStats() {
+        let window = RollingWindow(samples: [])
+        
+        // Test that empty window returns nil for stats
+        XCTAssertNil(window.min, "Empty window should return nil for min")
+        XCTAssertNil(window.max, "Empty window should return nil for max")
+        XCTAssertNil(window.avg, "Empty window should return nil for avg")
+        XCTAssertTrue(window.samples.isEmpty, "Empty window should have no samples")
+    }
+    
+    func testRollingWindowSingleSampleStats() {
+        let baseDate = Date()
+        let samples = [Sample(timestamp: baseDate, value: 42.0)]
+        let window = RollingWindow(samples: samples)
+        
+        // Test single sample stats
+        XCTAssertEqual(window.min, 42.0, "Single sample min should be the sample value")
+        XCTAssertEqual(window.max, 42.0, "Single sample max should be the sample value")
+        XCTAssertEqual(window.avg, 42.0, "Single sample avg should be the sample value")
+        XCTAssertEqual(window.samples.count, 1, "Should have 1 sample")
+    }
+    
+    func testRollingWindowNegativeValues() {
+        let baseDate = Date()
+        let samples = [
+            Sample(timestamp: baseDate, value: -10.0),
+            Sample(timestamp: baseDate.addingTimeInterval(60), value: -5.0),
+            Sample(timestamp: baseDate.addingTimeInterval(120), value: 0.0),
+            Sample(timestamp: baseDate.addingTimeInterval(180), value: 5.0),
+            Sample(timestamp: baseDate.addingTimeInterval(240), value: 10.0)
+        ]
+        
+        let window = RollingWindow(samples: samples)
+        
+        // Test stats with negative values
+        XCTAssertEqual(window.min, -10.0, "Min value should be -10.0")
+        XCTAssertEqual(window.max, 10.0, "Max value should be 10.0")
+        XCTAssertEqual(window.avg, 0.0, "Average value should be 0.0")
+        XCTAssertEqual(window.samples.count, 5, "Should have 5 samples")
+    }
+    
+    func testInteractiveChartIntegration() {
+        let store = LiveDataStore()
+        let parser = TopicParser()
+        let testDate = Date()
+        let recorder = LiveSeriesRecorder(store: store, now: { testDate })
+        
+        // Feed multiple values over time to create a window with stats
+        for i in 0..<5 {
+            let socValue = 70.0 + Double(i) * 5.0
+            let socPayload: [String: Any] = ["value": socValue]
+            
+            if let socMessage = parser.parseMessage(topic: "N/c0ffee000001/system/0/Dc/Battery/Soc", payload: socPayload) {
+                store.update(with: socMessage)
+            }
+            
+            // Advance time and record
+            let newDate = testDate.addingTimeInterval(Double(i) * 60)
+            recorder.record()
+        }
+        
+        // Test that the window has the expected stats
+        let window = TimeRange.fiveMinutes.getWindow(for: recorder, series: .batterySoc)
+        XCTAssertEqual(window.samples.count, 5, "Should have 5 samples")
+        XCTAssertEqual(window.min, 70.0, "Min should be 70.0")
+        XCTAssertEqual(window.max, 90.0, "Max should be 90.0")
+        XCTAssertEqual(window.avg, 80.0, "Avg should be 80.0")
+    }
+    
+    func testInteractiveChartEmptyState() {
+        let store = LiveDataStore()
+        let recorder = LiveSeriesRecorder(store: store, now: { Date() })
+        
+        // Test with no data
+        let window = TimeRange.fiveMinutes.getWindow(for: recorder, series: .batterySoc)
+        XCTAssertTrue(window.samples.isEmpty, "Empty window should have no samples")
+        XCTAssertNil(window.min, "Empty window should return nil for min")
+        XCTAssertNil(window.max, "Empty window should return nil for max")
+        XCTAssertNil(window.avg, "Empty window should return nil for avg")
+    }
 }
