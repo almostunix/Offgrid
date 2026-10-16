@@ -123,6 +123,8 @@ public struct DashboardScreen: View {
                 }
                 .padding()
             }
+            .background(OffgridTheme.background)
+            .scrollContentBackground(.hidden)
             .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -173,13 +175,12 @@ public struct DashboardScreen: View {
             }
         }
         .padding()
-        .background(.regularMaterial)
-        .cornerRadius(16)
-        .shadow(radius: 3)
+        .background(OffgridTheme.surface)
+        .cornerRadius(OffgridTheme.tileRadius)
         .overlay(alignment: .topTrailing) {
             if isEditing {
                 Image(systemName: "minus.circle.fill")
-                    .foregroundStyle(.white, Color.red)
+                    .foregroundStyle(.white, OffgridTheme.alarm)
                     .padding(8)
                     .onTapGesture {
                         removeTile(tile)
@@ -189,10 +190,10 @@ public struct DashboardScreen: View {
         .draggable(tile.id) {
             Image(systemName: tile.type.icon)
                 .font(.title)
-                .foregroundStyle(.blue)
+                .foregroundStyle(OffgridTheme.grid)
                 .padding()
-                .background(.regularMaterial)
-                .cornerRadius(12)
+                .background(OffgridTheme.surface)
+                .cornerRadius(OffgridTheme.buttonRadius)
         }
         .dropDestination(for: String.self, action: { ids, location in
             handleDrop(ids: ids, onto: tile)
@@ -276,14 +277,17 @@ private struct SystemOverviewView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("State of Charge")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(OffgridTheme.textSecondary)
                     
                     if let soc = store.system.batterySoc {
-                        Text(String(format: "%.1f%%", soc))
-                            .font(.system(size: 32, weight: .bold))
+                        let formatted = MetricFormat.percent(soc)
+                        Text(formatted.value)
+                            .font(OffgridTheme.numberFont(size: 32))
+                            .foregroundColor(OffgridTheme.textPrimary)
                     } else {
-                        Text("-")
-                            .font(.system(size: 32, weight: .bold))
+                        Text("–")
+                            .font(OffgridTheme.numberFont(size: 32))
+                            .foregroundColor(OffgridTheme.textPrimary)
                     }
                 }
                 
@@ -291,14 +295,17 @@ private struct SystemOverviewView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Solar Input")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(OffgridTheme.textSecondary)
                     
                     if let power = store.system.pvPower {
-                        Text(PowerFormatter.formatPower(power))
-                            .font(.system(size: 32, weight: .bold))
+                        let formatted = MetricFormat.watts(power)
+                        Text(formatted.value)
+                            .font(OffgridTheme.numberFont(size: 32))
+                            .foregroundColor(OffgridTheme.solar)
                     } else {
-                        Text("-")
-                            .font(.system(size: 32, weight: .bold))
+                        Text("–")
+                            .font(OffgridTheme.numberFont(size: 32))
+                            .foregroundColor(OffgridTheme.solar)
                     }
                 }
             }
@@ -307,14 +314,16 @@ private struct SystemOverviewView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Time to Go")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(OffgridTheme.textSecondary)
                 
                 if let timeToGo = store.system.timeToGo, timeToGo > 0 {
                     Text(TimeFormatter.formatTimeToGo(timeToGo))
-                        .font(.system(size: 24, weight: .semibold))
+                        .font(OffgridTheme.numberFont(size: 24))
+                        .foregroundColor(OffgridTheme.textPrimary)
                 } else {
-                    Text("-")
-                        .font(.system(size: 24, weight: .semibold))
+                    Text("–")
+                        .font(OffgridTheme.numberFont(size: 24))
+                        .foregroundColor(OffgridTheme.textPrimary)
                 }
             }
         }

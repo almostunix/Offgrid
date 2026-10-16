@@ -28,11 +28,13 @@ public struct TopicExplorerScreen: View {
             
             if filteredTopics.isEmpty && !searchText.isEmpty {
                 Text("No topics match your search")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(OffgridTheme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .listRowBackground(Color.clear)
             }
         }
+        .background(OffgridTheme.background)
+        .scrollContentBackground(.hidden)
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
         .searchSuggestions({})
         .navigationTitle("Topic Explorer")
@@ -66,13 +68,13 @@ private struct TopicRowView: View {
             // Raw value
             Text(topic.rawValue)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(OffgridTheme.textSecondary)
                 .lineLimit(1)
             
             // Timestamp
             Text(topic.timestamp.formatted())
                 .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(OffgridTheme.textSecondary)
         }
         .padding(.vertical, 8)
     }

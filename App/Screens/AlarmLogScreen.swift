@@ -29,7 +29,7 @@ public struct AlarmLogScreen: View {
             Section {
                 if filteredActiveAlarms.isEmpty {
                     Text("No active alarms")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(OffgridTheme.textSecondary)
                 } else {
                     ForEach(filteredActiveAlarms) { alarm in
                         AlarmRow(alarm: alarm)
@@ -47,7 +47,7 @@ public struct AlarmLogScreen: View {
                             .font(.caption)
                             .foregroundStyle(.white)
                             .padding(4)
-                            .background(Color.red)
+                            .background(OffgridTheme.alarm)
                             .clipShape(Circle())
                     }
                 }
@@ -57,7 +57,7 @@ public struct AlarmLogScreen: View {
             Section("Alarm Log") {
                 if alarmStore.log.isEmpty {
                     Text("No alarm events yet")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(OffgridTheme.textSecondary)
                 } else {
                     ForEach(filteredLogEntries) { alarm in
                         AlarmLogRow(alarm: alarm)
@@ -65,6 +65,8 @@ public struct AlarmLogScreen: View {
                 }
             }
         }
+        .background(OffgridTheme.background)
+        .scrollContentBackground(.hidden)
         .navigationTitle("Alarm Log")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText)
@@ -172,7 +174,7 @@ private struct AlarmRow: View {
                 // Time since alarm
                 Text("Since: " + TimeFormatter.formatTimeSince(alarm.since))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(OffgridTheme.textSecondary)
             }
             
             Spacer()
@@ -192,11 +194,11 @@ private struct AlarmRow: View {
     private var alarmLevelColor: Color {
         switch alarm.level {
         case .alarm:
-            return Color.red
+            return OffgridTheme.alarm
         case .warning:
-            return Color.orange
+            return OffgridTheme.warning
         case .ok:
-            return Color.green
+            return OffgridTheme.battery
         }
     }
 }
@@ -221,7 +223,7 @@ private struct AlarmLogRow: View {
                 HStack {
                     Text(TimeFormatter.timeFormatter.string(from: alarm.since))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(OffgridTheme.textSecondary)
                     
                     Spacer()
                     
@@ -243,11 +245,11 @@ private struct AlarmLogRow: View {
     private var alarmLevelColor: Color {
         switch alarm.level {
         case .alarm:
-            return Color.red
+            return OffgridTheme.alarm
         case .warning:
-            return Color.orange
+            return OffgridTheme.warning
         case .ok:
-            return Color.green
+            return OffgridTheme.battery
         }
     }
 }
