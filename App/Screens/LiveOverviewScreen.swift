@@ -31,8 +31,14 @@ public struct LiveOverviewScreen: View {
     /// Action to stop demo mode
     public var onStopDemo: (() -> Void)?
 
+    /// Action to disconnect from a real Cerbo
+    public var onDisconnect: (() -> Void)?
+
+    /// True while the connection is retrying (the live view stays, with a banner)
+    public var isReconnecting: Bool = false
+
     // Initialize with data store (previews may omit the recorder)
-    public init(store: LiveDataStore, recorder: LiveSeriesRecorder? = nil, historyCache: HistoryCache? = nil, isDemo: Bool = false, isUnencrypted: Bool = false, portalId: String? = nil, onStopDemo: (() -> Void)? = nil) {
+    public init(store: LiveDataStore, recorder: LiveSeriesRecorder? = nil, historyCache: HistoryCache? = nil, isDemo: Bool = false, isUnencrypted: Bool = false, portalId: String? = nil, onStopDemo: (() -> Void)? = nil, onDisconnect: (() -> Void)? = nil, isReconnecting: Bool = false) {
         self.store = store
         self.recorder = recorder ?? LiveSeriesRecorder(store: store)
         self.historyCache = historyCache ?? HistoryCache(inMemory: true)
@@ -40,6 +46,8 @@ public struct LiveOverviewScreen: View {
         self.isUnencrypted = isUnencrypted
         self.portalId = portalId
         self.onStopDemo = onStopDemo
+        self.onDisconnect = onDisconnect
+        self.isReconnecting = isReconnecting
     }
     
     public var body: some View {
@@ -141,6 +149,18 @@ public struct LiveOverviewScreen: View {
                         .labelStyle(.titleAndIcon)
                         .foregroundStyle(.orange)
                         .font(.caption)
+                }
+            }
+            if !isDemo {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Disconnect") { onDisconnect?() }
+                }
+            }
+            if isReconnecting {
+                ToolbarItem(placement: .principal) {
+                    Label("Reconnecting…", systemImage: "arrow.clockwise")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
                 }
             }
             if isDemo {

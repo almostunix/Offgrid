@@ -10,8 +10,8 @@ struct ConnectScreen: View {
     var body: some View {
         NavigationStack {
             Group {
-                if viewModel.connectionState == .connected {
-                    LiveOverviewScreen(store: viewModel.liveDataStore, recorder: viewModel.liveSeriesRecorder, historyCache: viewModel.isDemo ? viewModel.demoHistoryCache : viewModel.historyCache, isDemo: viewModel.isDemo, isUnencrypted: viewModel.isUnencryptedWithPassword, portalId: viewModel.portalId, onStopDemo: { viewModel.stopDemo() })
+                if ConnectionUI.showsLiveView(state: viewModel.connectionState, hasConnected: viewModel.connectedProfile != nil) {
+                    LiveOverviewScreen(store: viewModel.liveDataStore, recorder: viewModel.liveSeriesRecorder, historyCache: viewModel.isDemo ? viewModel.demoHistoryCache : viewModel.historyCache, isDemo: viewModel.isDemo, isUnencrypted: viewModel.isUnencryptedWithPassword, portalId: viewModel.portalId, onStopDemo: { viewModel.stopDemo() }, onDisconnect: { viewModel.disconnect() }, isReconnecting: viewModel.connectionState == .reconnecting)
                 } else {
                     List {
                         // Connection status
