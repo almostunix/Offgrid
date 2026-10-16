@@ -22,6 +22,9 @@ public struct EnergyHistoryScreen: View {
     /// Number of days to display
     @State private var lastDays: Int = 7
     
+    /// Action to refresh history data
+    public var onRefresh: (() -> Void)? = nil
+    
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -62,6 +65,9 @@ public struct EnergyHistoryScreen: View {
                     .frame(height: 400)
                     .padding()
                 }
+            }
+            .refreshable {
+                onRefresh?()
             }
         }
         .navigationTitle("Energy History")

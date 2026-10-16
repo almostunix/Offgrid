@@ -37,8 +37,11 @@ public struct LiveOverviewScreen: View {
     /// True while the connection is retrying (the live view stays, with a banner)
     public var isReconnecting: Bool = false
 
+    /// Action to refresh history data
+    public var onRefreshHistory: (() -> Void)? = nil
+
     // Initialize with data store (previews may omit the recorder)
-    public init(store: LiveDataStore, recorder: LiveSeriesRecorder? = nil, historyCache: HistoryCache? = nil, isDemo: Bool = false, isUnencrypted: Bool = false, portalId: String? = nil, onStopDemo: (() -> Void)? = nil, onDisconnect: (() -> Void)? = nil, isReconnecting: Bool = false) {
+    public init(store: LiveDataStore, recorder: LiveSeriesRecorder? = nil, historyCache: HistoryCache? = nil, isDemo: Bool = false, isUnencrypted: Bool = false, portalId: String? = nil, onStopDemo: (() -> Void)? = nil, onDisconnect: (() -> Void)? = nil, isReconnecting: Bool = false, onRefreshHistory: (() -> Void)? = nil) {
         self.store = store
         self.recorder = recorder ?? LiveSeriesRecorder(store: store)
         self.historyCache = historyCache ?? HistoryCache(inMemory: true)
@@ -153,7 +156,7 @@ public struct LiveOverviewScreen: View {
                 }
                 
                 // Energy History Section
-                NavigationLink(destination: EnergyHistoryScreen(historyCache: historyCache, isDemo: isDemo, portalId: portalId)) {
+                NavigationLink(destination: EnergyHistoryScreen(historyCache: historyCache, isDemo: isDemo, portalId: portalId, onRefresh: onRefreshHistory)) {
                     EnergyHistoryPreview()
                         .padding()
                         .background(OffgridTheme.surface)

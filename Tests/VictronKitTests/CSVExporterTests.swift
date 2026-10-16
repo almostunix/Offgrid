@@ -123,6 +123,55 @@ final class CSVExporterTests: XCTestCase {
         XCTAssertEqual(firstDataLine, expectedFirstLine)
     }
 
+    func testSolarDaysCSVExportWithTimeZones() {
+        // Create test data representing the start of 2026-10-15 in different time zones
+        // We need to create dates that represent "start of day" in each time zone
+        
+        // For Tokyo (UTC+9), start of 2026-10-15 is 2026-10-14 15:00 UTC
+        let tokyoTimeZone = TimeZone(identifier: "Asia/Tokyo")!
+        var tokyoCalendar = Calendar.current
+        tokyoCalendar.timeZone = tokyoTimeZone
+        let tokyoDate = tokyoCalendar.date(from: DateComponents(year: 2026, month: 10, day: 15, hour: 0, minute: 0, second: 0))!
+        
+        let tokyoSolarDay = SolarDayRecord(
+            portalId: "test",
+            instance: "1",
+            dayOffsetFetched: 0,
+            date: tokyoDate,
+            yield: 5.5,
+            maxPower: 1000,
+            maxPvVoltage: 48.0,
+            timeInBulk: 3600
+        )
+        
+        let tokyoCSV = CSVExporter.csv(solarDays: [tokyoSolarDay], timeZone: tokyoTimeZone)
+        let tokyoLines = tokyoCSV.components(separatedBy: "\r\n")
+        let tokyoDateLine = tokyoLines[1]
+        XCTAssertTrue(tokyoDateLine.hasPrefix("2026-10-15,"), "Tokyo time zone should show 2026-10-15")
+
+        // For Los Angeles (UTC-7 during DST in October), start of 2026-10-15 is 2026-10-15 06:00 UTC
+        let laTimeZone = TimeZone(identifier: "America/Los_Angeles")!
+        var laCalendar = Calendar.current
+        laCalendar.timeZone = laTimeZone
+        let laDate = laCalendar.date(from: DateComponents(year: 2026, month: 10, day: 15, hour: 0, minute: 0, second: 0))!
+        
+        let laSolarDay = SolarDayRecord(
+            portalId: "test",
+            instance: "1",
+            dayOffsetFetched: 0,
+            date: laDate,
+            yield: 5.5,
+            maxPower: 1000,
+            maxPvVoltage: 48.0,
+            timeInBulk: 3600
+        )
+        
+        let laCSV = CSVExporter.csv(solarDays: [laSolarDay], timeZone: laTimeZone)
+        let laLines = laCSV.components(separatedBy: "\r\n")
+        let laDateLine = laLines[1]
+        XCTAssertTrue(laDateLine.hasPrefix("2026-10-15,"), "Los Angeles time zone should show 2026-10-15")
+    }
+
     func testEmptySolarDaysCSVExport() {
         let csv = CSVExporter.csv(solarDays: [])
         let expected = "date,yield_kWh,max_power_W,max_pv_voltage_V,time_in_bulk_min"

@@ -11,7 +11,7 @@ struct ConnectScreen: View {
         NavigationStack {
             Group {
                 if ConnectionUI.showsLiveView(state: viewModel.connectionState, hasConnected: viewModel.connectedProfile != nil) {
-                    LiveOverviewScreen(store: viewModel.liveDataStore, recorder: viewModel.liveSeriesRecorder, historyCache: viewModel.isDemo ? viewModel.demoHistoryCache : viewModel.historyCache, isDemo: viewModel.isDemo, isUnencrypted: viewModel.isUnencryptedWithPassword, portalId: viewModel.portalId, onStopDemo: { viewModel.stopDemo() }, onDisconnect: { viewModel.disconnect() }, isReconnecting: viewModel.connectionState == .reconnecting)
+                    LiveOverviewScreen(store: viewModel.liveDataStore, recorder: viewModel.liveSeriesRecorder, historyCache: viewModel.isDemo ? viewModel.demoHistoryCache : viewModel.historyCache, isDemo: viewModel.isDemo, isUnencrypted: viewModel.isUnencryptedWithPassword, portalId: viewModel.portalId, onStopDemo: { viewModel.stopDemo() }, onDisconnect: { viewModel.disconnect() }, isReconnecting: viewModel.connectionState == .reconnecting, onRefreshHistory: viewModel.isDemo ? nil : { viewModel.requestHistory() })
                 } else {
                     List {
                         // Connection status

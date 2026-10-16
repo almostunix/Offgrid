@@ -16,14 +16,14 @@ public enum CSVExporter {
         return formatter
     }()
 
-    /// Date formatter for yyyy-MM-dd format
-    private static let dateOnlyFormatter: DateFormatter = {
+    /// A yyyy-MM-dd formatter for one time zone (made per call: DateFormatter isn't safe to share and mutate)
+    private static func dateOnlyFormatter(timeZone: TimeZone) -> DateFormatter {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
         return formatter
-    }()
+    }
 
     /// Number formatter for CSV values (en_US_POSIX locale, no grouping)
     private static let numberFormatter: NumberFormatter = {
@@ -115,8 +115,9 @@ public enum CSVExporter {
 
     /// Exports solar day records to CSV format
     /// - Parameter solarDays: Array of solar day records
+    /// - Parameter timeZone: Time zone for formatting dates (default: .current)
     /// - Returns: CSV formatted string
-    public static func csv(solarDays: [SolarDayRecord]) -> String {
+    public static func csv(solarDays: [SolarDayRecord], timeZone: TimeZone = .current) -> String {
         // Sort by date
         let sortedDays = solarDays.sorted { $0.date < $1.date }
 
@@ -124,15 +125,17 @@ public enum CSVExporter {
         let header = "date,yield_kWh,max_power_W,max_pv_voltage_V,time_in_bulk_min"
         var lines: [String] = [header]
 
+        let dateFormatter = dateOnlyFormatter(timeZone: timeZone)
+
         // Create data rows
         for day in sortedDays {
-            let dateString = dateOnlyFormatter.string(from: day.date)
+            let dateString = dateFormatter.string(from: day.date)
             let yieldString = formatCSVValue(day.yield)
             let maxPowerString = formatCSVValue(day.maxPower)
             let maxPvVoltageString = formatCSVValue(day.maxPvVoltage)
             let timeInBulkString = formatCSVValue(day.timeInBulk)
 
-            let row = "" + dateString + "," + yieldString + "," + maxPowerString + "," + maxPvVoltageString + "," + timeInBulkString
+            let row = dateString + "," + yieldString + "," + maxPowerString + "," + maxPvVoltageString + "," + timeInBulkString
             lines.append(row)
         }
 
