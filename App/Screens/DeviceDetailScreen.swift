@@ -19,7 +19,7 @@ public struct DeviceDetailScreen: View {
     
     public var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: OffgridTheme.tileGap) {
                 // Header
                 DeviceHeader(device: device)
                     .padding(.bottom)
@@ -41,6 +41,8 @@ public struct DeviceDetailScreen: View {
                 }
             }
             .padding()
+            .scrollContentBackground(.hidden)
+            .background(OffgridTheme.background)
             .navigationTitle(device.productName ?? "Device")
 #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -101,9 +103,9 @@ private struct DeviceHeader: View {
     /// Get color for device type
     private func deviceColor(for type: DeviceType) -> Color {
         switch type {
-        case .battery: return .blue
-        case .solarCharger: return .yellow
-        case .inverter: return .green
+        case .battery: return OffgridTheme.battery
+        case .solarCharger: return OffgridTheme.solar
+        case .inverter: return OffgridTheme.grid
         }
     }
 }
@@ -287,16 +289,17 @@ private struct MetricView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(OffgridTheme.textSecondary)
             
             Text(value)
                 .font(.title3)
                 .fontWeight(.semibold)
                 .monospacedDigit()
+                .foregroundStyle(OffgridTheme.textPrimary)
         }
         .frame(minWidth: 100)
         .padding(12)
-        .background(Color(.secondarySystemFill))
-        .cornerRadius(8)
+        .background(OffgridTheme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: OffgridTheme.tileRadius))
     }
 }

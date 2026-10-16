@@ -24,6 +24,8 @@ public struct DeviceListScreen: View {
                         selectedDevice = device
                     }
             }
+            .scrollContentBackground(.hidden)
+            .background(OffgridTheme.background)
             .navigationTitle("Devices")
             .navigationDestination(item: $selectedDevice) { device in
                 DeviceDetailScreen(device: device, store: store)
@@ -109,9 +111,9 @@ public struct DeviceListRow: View {
     /// Get color for device type
     private func deviceColor(for type: DeviceType) -> Color {
         switch type {
-        case .battery: return .blue
-        case .solarCharger: return .yellow
-        case .inverter: return .green
+        case .battery: return OffgridTheme.battery
+        case .solarCharger: return OffgridTheme.solar
+        case .inverter: return OffgridTheme.grid
         }
     }
 }
@@ -133,11 +135,10 @@ public struct StatusIndicator: View {
     /// Get color for status
     private func statusColor(for status: String) -> Color {
         switch status.lowercased() {
-        case "good", "float", "storage": return .green
-        case "fair", "bulk", "absorption": return .orange
-        case "low", "fault": return .red
-        case "critical": return .red
-        default: return .gray
+        case "good", "float", "storage": return OffgridTheme.battery
+        case "fair", "bulk", "absorption": return OffgridTheme.warning
+        case "low", "fault", "critical": return OffgridTheme.alarm
+        default: return OffgridTheme.textSecondary
         }
     }
     

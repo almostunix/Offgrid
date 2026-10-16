@@ -34,6 +34,8 @@ public struct DeviceSplitViewScreen: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .scrollContentBackground(.hidden)
+        .background(OffgridTheme.background)
     }
 }
 

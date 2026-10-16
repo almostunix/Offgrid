@@ -19,25 +19,25 @@ public struct PowerFlowScreen: View {
     
     public var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: OffgridTheme.tileGap) {
                 // Power Flow Diagram
                 PowerFlowDiagramView(store: store)
                     .padding()
-                    .background(.regularMaterial)
-                    .cornerRadius(16)
-                    .shadow(radius: 3)
+                    .background(OffgridTheme.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: OffgridTheme.tileRadius))
                     .padding(.horizontal)
                 
                 // Power Values Summary
                 PowerValuesSummaryView(store: store)
                     .padding()
-                    .background(.regularMaterial)
-                    .cornerRadius(16)
-                    .shadow(radius: 3)
+                    .background(OffgridTheme.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: OffgridTheme.tileRadius))
                     .padding(.horizontal)
             }
             .padding(.vertical)
         }
+        .scrollContentBackground(.hidden)
+        .background(OffgridTheme.background)
         .navigationTitle("Power Flow")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -58,7 +58,7 @@ private struct PowerFlowDiagramView: View {
             
             // All solar power goes into the DC side (the battery row stands for it)
             if let pv = store.system.pvPower, pv > 1.0 {
-                FlowIndicatorView(from: .solar, to: .battery, watts: pv, color: .yellow)
+                FlowIndicatorView(from: .solar, to: .battery, watts: pv)
             }
 
             // Battery in the middle (its own charge/discharge power is shown on it)
@@ -66,9 +66,9 @@ private struct PowerFlowDiagramView: View {
 
             // Net DC power between the DC side and the inverter: down = inverting, up = charging from AC
             if dcToInverter > 1.0 {
-                FlowIndicatorView(from: .battery, to: .inverter, watts: dcToInverter, color: .blue)
+                FlowIndicatorView(from: .battery, to: .inverter, watts: dcToInverter)
             } else if dcToInverter < -1.0 {
-                FlowIndicatorView(from: .inverter, to: .battery, watts: -dcToInverter, color: .green)
+                FlowIndicatorView(from: .inverter, to: .battery, watts: -dcToInverter)
             }
 
             // Inverter at the bottom
@@ -93,19 +93,20 @@ private struct SolarComponentView: View {
         VStack(spacing: 8) {
             Image(systemName: "sun.max.fill")
                 .font(.system(size: 48))
-                .foregroundStyle(.yellow)
+                .foregroundStyle(OffgridTheme.solar)
             
             Text("Solar")
                 .font(.headline)
+                .foregroundColor(OffgridTheme.textPrimary)
             
             if let power = power {
                 Text(PowerFormatter.formatPower(power))
                     .font(.subheadline)
-                    .foregroundStyle(power > 0 ? .yellow : .secondary)
+                    .foregroundStyle(power > 0 ? OffgridTheme.solar : OffgridTheme.textSecondary)
             } else {
                 Text("-")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(OffgridTheme.textSecondary)
             }
         }
         .accessibilityElement(children: .ignore)
@@ -122,19 +123,20 @@ private struct BatteryComponentView: View {
         VStack(spacing: 8) {
             Image(systemName: "battery.100")
                 .font(.system(size: 48))
-                .foregroundStyle(.blue)
+                .foregroundStyle(OffgridTheme.battery)
             
             Text("Battery")
                 .font(.headline)
+                .foregroundColor(OffgridTheme.textPrimary)
             
             if let power = power {
                 Text(PowerFormatter.formatPower(power))
                     .font(.subheadline)
-                    .foregroundStyle(power > 0 ? .green : .orange)
+                    .foregroundStyle(power > 0 ? OffgridTheme.battery : OffgridTheme.warning)
             } else {
                 Text("-")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(OffgridTheme.textSecondary)
             }
         }
         .accessibilityElement(children: .ignore)
@@ -154,19 +156,20 @@ private struct InverterComponentView: View {
         VStack(spacing: 8) {
             Image(systemName: "poweroutlet.type.f")
                 .font(.system(size: 48))
-                .foregroundStyle(.green)
+                .foregroundStyle(OffgridTheme.grid)
             
             Text("Inverter")
                 .font(.headline)
+                .foregroundColor(OffgridTheme.textPrimary)
             
             if let outputPower = acOutputPower {
                 Text(PowerFormatter.formatPower(outputPower))
                     .font(.subheadline)
-                    .foregroundStyle(outputPower > 0 ? .green : .secondary)
+                    .foregroundStyle(outputPower > 0 ? OffgridTheme.grid : OffgridTheme.textSecondary)
             } else {
                 Text("-")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(OffgridTheme.textSecondary)
             }
         }
         .accessibilityElement(children: .ignore)
@@ -182,7 +185,6 @@ private struct FlowIndicatorView: View {
     let from: PowerNode
     let to: PowerNode
     let watts: Double
-    let color: Color
 
     /// Layout order top to bottom; an arrow points down when power flows to a node lower on screen.
     private static func rank(_ node: PowerNode) -> Int {
@@ -190,28 +192,36 @@ private struct FlowIndicatorView: View {
     }
     private var pointsDown: Bool { Self.rank(from) < Self.rank(to) }
     private var flowPower: Double { watts }
+    private var flowColor: Color {
+        switch from {
+        case .solar: return OffgridTheme.solar
+        case .battery: return OffgridTheme.battery
+        case .inverter: return OffgridTheme.grid
+        case .loads: return OffgridTheme.textPrimary
+        }
+    }
 
     var body: some View {
         VStack(spacing: 8) {
             // Arrow indicating flow direction
             Image(systemName: pointsDown ? "arrow.down" : "arrow.up")
                 .font(.title2)
-                .foregroundStyle(color)
+                .foregroundStyle(flowColor)
             
             // Flow power label
             if flowPower > 0 {
                 Text(PowerFormatter.formatPower(flowPower))
                     .font(.caption)
-                    .foregroundStyle(color)
+                    .foregroundStyle(flowColor)
             }
             
             // Animated flow line
             Rectangle()
-                .fill(color.opacity(0.3))
+                .fill(flowColor.opacity(0.3))
                 .frame(width: 2, height: 40)
                 .overlay {
                     Rectangle()
-                        .fill(color)
+                        .fill(flowColor)
                         .frame(width: 2, height: 20)
                         .offset(y: pointsDown ? 20 : -20)
                         .animation(.linear(duration: 1.5).repeatForever(autoreverses: false), value: flowPower)
@@ -228,7 +238,7 @@ private struct ACLoadsLabel: View {
     var body: some View {
         Text("AC Loads")
             .font(.headline)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(OffgridTheme.textSecondary)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("AC Loads")
     }
@@ -242,62 +252,32 @@ private struct PowerValuesSummaryView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Power Values")
                 .font(.headline)
+                .foregroundColor(OffgridTheme.textPrimary)
             
-            // Solar Input
-            PowerValueRow(title: "Solar Input", value: store.system.pvPower, color: .yellow)
-            
-            // Battery Power
-            PowerValueRow(title: "Battery Power", value: store.system.batteryPower, color: .blue)
-            
-            // AC Input
-            PowerValueRow(title: "AC Input", value: store.system.acInputPower, color: .green)
-            
-            // AC Output
-            PowerValueRow(title: "AC Output", value: store.system.acConsumptionOnOutput, color: .cyan)
-            
-            // Total AC Consumption
-            PowerValueRow(title: "Total AC Consumption", value: store.system.acConsumptionTotal, color: .purple)
+            // Solar Input ("–" when the Cerbo hasn't sent it)
+            let pvPowerText = MetricFormat.watts(store.system.pvPower)
+            MetricRow(icon: "sun.max", label: "Solar Input", value: pvPowerText.value, unit: pvPowerText.unit)
+
+            // Battery Power ("–" when the Cerbo hasn't sent it)
+            let batteryPowerText = MetricFormat.watts(store.system.batteryPower)
+            MetricRow(icon: "battery.100", label: "Battery Power", value: batteryPowerText.value, unit: batteryPowerText.unit)
+
+            // AC Input ("–" when the Cerbo hasn't sent it)
+            let acInputPowerText = MetricFormat.watts(store.system.acInputPower)
+            MetricRow(icon: "poweroutlet.type.f", label: "AC Input", value: acInputPowerText.value, unit: acInputPowerText.unit)
+
+            // AC Output ("–" when the Cerbo hasn't sent it)
+            let acConsumptionOnOutputText = MetricFormat.watts(store.system.acConsumptionOnOutput)
+            MetricRow(icon: "house", label: "AC Output", value: acConsumptionOnOutputText.value, unit: acConsumptionOnOutputText.unit)
+
+            // Total AC Consumption ("–" when the Cerbo hasn't sent it)
+            let acConsumptionTotalText = MetricFormat.watts(store.system.acConsumptionTotal)
+            MetricRow(icon: "bolt", label: "Total AC Consumption", value: acConsumptionTotalText.value, unit: acConsumptionTotalText.unit)
         }
     }
 }
 
-/// Individual power value row
-private struct PowerValueRow: View {
-    let title: String
-    let value: Double?
-    let color: Color
-    
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            
-            Spacer()
-            
-            if let value = value {
-                Text(PowerFormatter.formatPower(value))
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(valueColor(value))
-            } else {
-                Text("-")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-    
-    func valueColor(_ value: Double) -> Color {
-        if value > 0 {
-            return color
-        } else if value < 0 {
-            return color.opacity(0.7)
-        } else {
-            return .secondary
-        }
-    }
-}
+
 
 // Preview for Xcode
 #if DEBUG
