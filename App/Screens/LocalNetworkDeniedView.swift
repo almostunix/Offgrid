@@ -10,7 +10,7 @@ struct LocalNetworkDeniedView: View {
         VStack(spacing: 20) {
             Image(systemName: "network.slash")
                 .font(.system(size: 60))
-                .foregroundColor(.gray)
+                .foregroundColor(OffgridTheme.textSecondary)
                 .padding(.top, 40)
 
             Text("Offgrid can't search your network.")
@@ -19,7 +19,7 @@ struct LocalNetworkDeniedView: View {
 
             Text("Turn on Local Network for Offgrid in Settings > Privacy & Security > Local Network.")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(OffgridTheme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
@@ -35,7 +35,8 @@ struct LocalNetworkDeniedView: View {
             }
             .buttonStyle(.borderedProminent)
             .padding(.bottom, 20)
-        }
+            .background(OffgridTheme.background)
+            }
     }
 }
 

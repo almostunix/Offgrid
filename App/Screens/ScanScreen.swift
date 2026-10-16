@@ -29,12 +29,12 @@ struct ScanScreen<Advanced: View>: View {
                                 Text(profile.name)
                                 Text("Host: \(profile.host):\(profile.port)")
                                     .font(.caption)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(OffgridTheme.textSecondary)
                             }
                             Spacer()
                             if viewModel.connectedProfile?.id == profile.id {
                                 Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(OffgridTheme.grid)
                             }
                         }
                     }
@@ -67,10 +67,10 @@ struct ScanScreen<Advanced: View>: View {
                                     Text(device.name)
                                     Text("Host: \(device.host)")
                                         .font(.caption)
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(OffgridTheme.textSecondary)
                                     Text("MQTT is off on this Cerbo. Turn it on in the Cerbo's settings to use Offgrid.")
                                         .font(.caption)
-                                        .foregroundColor(.orange)
+                                        .foregroundColor(OffgridTheme.warning)
                                 }
                                 Spacer()
                             }
@@ -83,7 +83,7 @@ struct ScanScreen<Advanced: View>: View {
                 Section {
                     Text("No Cerbo found. Make sure your phone is on the same Wi-Fi as the Cerbo and that MQTT is on. You can also add it by hand under Advanced.")
                         .multilineTextAlignment(.center)
-                        .foregroundColor(.gray)
+                        .foregroundColor(OffgridTheme.textSecondary)
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -105,6 +105,7 @@ struct ScanScreen<Advanced: View>: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
         .navigationTitle("Cerbo Connection")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

@@ -20,6 +20,7 @@ struct ConnectScreen: View {
                 }
             }
             .navigationTitle("Cerbo Connection")
+            .background(OffgridTheme.background)
             .sheet(isPresented: $showingAddProfile) {
                 AddEditProfileView(isPresented: $showingAddProfile, profile: nil, onSave: { profile, password in
                     viewModel.saveProfile(profile, password: password)
@@ -68,7 +69,7 @@ struct ConnectScreen: View {
                 
                 if viewModel.certificateChanged {
                     Label("This Cerbo's certificate has changed since you trusted it. The app will not connect. If you replaced or reset the Cerbo, delete this connection and add it again.", systemImage: "exclamationmark.shield.fill")
-                        .foregroundStyle(.red)
+                        .foregroundStyle(OffgridTheme.alarm)
                         .font(.callout)
                 }
             }
@@ -82,14 +83,14 @@ struct ConnectScreen: View {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(profile.name)
-                                Text("Host: \(profile.host):\(profile.port)")
+                                Text("Host: \((profile.host)):\((profile.port))")
                                     .font(.caption)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(OffgridTheme.textSecondary)
                             }
                             Spacer()
                             if viewModel.connectedProfile?.id == profile.id {
                                 Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(OffgridTheme.grid)
                             }
                         }
                     }
@@ -139,7 +140,7 @@ struct ConnectScreen: View {
                 if viewModel.useTLS {
                     Text("TLS connection (requires valid certificate)")
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(OffgridTheme.textSecondary)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -158,6 +159,7 @@ struct ConnectScreen: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
     }
 }
 

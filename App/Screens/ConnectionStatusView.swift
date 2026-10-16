@@ -21,7 +21,7 @@ struct ConnectionStatusView: View {
             Spacer()
             if isUnencryptedWithPassword && state == .connected {
                 Label("Not encrypted", systemImage: "lock.open.fill")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(OffgridTheme.warning)
                     .font(.caption)
             }
         }
@@ -61,15 +61,15 @@ struct ConnectionStatusView: View {
     private var statusColor: Color {
         switch state {
         case .idle:
-            return .gray
+            return OffgridTheme.textSecondary
         case .connecting:
-            return .orange
+            return OffgridTheme.warning
         case .connected:
-            return .green
+            return OffgridTheme.battery
         case .reconnecting:
-            return .orange
+            return OffgridTheme.warning
         case .failed:
-            return .red
+            return OffgridTheme.alarm
         }
     }
 }

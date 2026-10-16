@@ -18,7 +18,7 @@ struct TrustPromptView: View {
         VStack(spacing: 20) {
             Image(systemName: "hand.tap.fill")
                 .font(.system(size: 40))
-                .foregroundColor(.orange)
+                .foregroundColor(OffgridTheme.warning)
                 .padding(.bottom, 8)
 
             Text("Trust this Cerbo?")
@@ -27,7 +27,7 @@ struct TrustPromptView: View {
 
             Text("The certificate for this connection is not yet trusted.")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(OffgridTheme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
@@ -49,8 +49,8 @@ struct TrustPromptView: View {
                     .padding(.top, 4)
             }
             .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(8)
+            .background(OffgridTheme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: OffgridTheme.tileRadius))
 
             HStack(spacing: 20) {
                 Button(action: onCancel) {
@@ -69,5 +69,6 @@ struct TrustPromptView: View {
         }
         .padding()
         .frame(maxWidth: 400)
+        .background(OffgridTheme.background)
     }
 }

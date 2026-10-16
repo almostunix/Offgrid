@@ -684,12 +684,12 @@ public struct EnergyHistoryPreview: View {
             
             // Placeholder for chart preview
             Rectangle()
-                .fill(Color.yellow.opacity(0.3))
+                .fill(OffgridTheme.solar.opacity(0.3))
                 .frame(height: 100)
-                .cornerRadius(8)
+                .clipShape(RoundedRectangle(cornerRadius: OffgridTheme.tileRadius))
                 .overlay(
                     Image(systemName: "chartbar")
-                        .foregroundStyle(.yellow)
+                        .foregroundStyle(OffgridTheme.solar)
                 )
         }
     }
