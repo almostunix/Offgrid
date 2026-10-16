@@ -97,8 +97,9 @@ public struct DashboardScreen: View {
     @State private var tiles: [DashboardTile] = []
     
     /// Whether we're in edit mode
-    @State private var isEditing = false
-    
+    @Environment(\.editMode) private var editMode
+    private var isEditing: Bool { editMode?.wrappedValue.isEditing == true }
+
     /// Currently dragged tile ID
     @State private var draggedTileId: UUID?
     
@@ -138,12 +139,6 @@ public struct DashboardScreen: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .navigationBarTrailing) {
             EditButton()
-                .onChange(of: isEditing) { newValue in
-                    // When exiting edit mode, sort tiles by position
-                    if !newValue {
-                        tiles.sort { $0.position < $1.position }
-                    }
-                }
         }
     }
     
@@ -199,10 +194,10 @@ public struct DashboardScreen: View {
                 .background(.regularMaterial)
                 .cornerRadius(12)
         }
-        .dropDestination(for: String.self) { ids, location in
-            handleDrop(ids: ids, location: location)
+        .dropDestination(for: String.self, action: { ids, location in
+            handleDrop(ids: ids, onto: tile)
             return true
-        }
+        })
     }
     
     /// Height for a tile based on its size
@@ -246,26 +241,21 @@ public struct DashboardScreen: View {
     }
     
     /// Handle drop of tiles
-    private func handleDrop(ids: [String], location: CGPoint) -> Bool {
+    private func handleDrop(ids: [String], onto targetTile: DashboardTile) -> Bool {
         // Find the tile being dropped
         guard let droppedId = ids.first,
-              let droppedIndex = self.tiles.firstIndex(where: { $0.id == droppedId }) else {
+              let droppedTile = self.tiles.first(where: { $0.id == droppedId }) else {
             return false
         }
         
-        // Find the tile at the drop location
-        if let destinationIndex = self.tiles.firstIndex(where: { $0.id != droppedId }) {
-            // Move the tile
-            let movedTile = self.tiles[droppedIndex]
-            self.tiles.remove(at: droppedIndex)
-            self.tiles.insert(movedTile, at: destinationIndex)
-            
-            // Update positions
-            for (index, tile) in self.tiles.enumerated() {
-                var mutableTile = tile
-                mutableTile.position = index
-                self.tiles[index] = mutableTile
-            }
+        // Reorder using TileOrder
+        self.tiles = TileOrder.move(self.tiles, moving: droppedTile, onto: targetTile)
+        
+        // Update positions
+        for (index, tile) in self.tiles.enumerated() {
+            var mutableTile = tile
+            mutableTile.position = index
+            self.tiles[index] = mutableTile
         }
         
         return true
