@@ -84,6 +84,10 @@ public final class RollingBuffer {
         
         // Add to 1-hour buffer
         oneHourBuffer.append(sample)
+        
+        // Trim old samples from both buffers
+        trimFiveMinuteBuffer(with: sample.timestamp)
+        trimOneHourBuffer(with: sample.timestamp)
     }
     
     /// Get the 5-minute rolling window
@@ -127,6 +131,18 @@ public final class RollingBuffer {
         fiveMinuteBuffer.removeAll()
         oneHourBuffer.removeAll()
     }
+    
+    /// Number of samples in the 5-minute buffer
+    internal var fiveMinuteCount: Int {
+        fiveMinuteBuffer.count
+    }
+    
+    /// Number of samples in the 1-hour buffer
+    internal var oneHourCount: Int {
+        oneHourBuffer.count
+    }
+    
+
     
     /// Trim old samples from 5-minute buffer based on the current timestamp
     /// - Parameter currentTimestamp: The current timestamp

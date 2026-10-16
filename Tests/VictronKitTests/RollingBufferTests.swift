@@ -120,6 +120,23 @@ final class RollingBufferTests: XCTestCase {
         XCTAssertEqual(oneHourWindow.samples.first?.value, 42.0)
     }
     
+    func testRollingBufferTrimsOnInsert() {
+        let buffer = RollingBuffer()
+        let startTime = Date()
+        
+        // Add 10,000 samples one second apart without calling a getter
+        for i in 0..<10000 {
+            let sample = Sample(timestamp: startTime.addingTimeInterval(TimeInterval(i)), value: Double(i))
+            buffer.addSample(sample)
+        }
+        
+        // After adding samples, buffers should be trimmed automatically
+        // 5-minute buffer should contain at most 301 samples (300 seconds + 1 current)
+        // 1-hour buffer should contain at most 3601 samples (3600 seconds + 1 current)
+        XCTAssertLessThanOrEqual(buffer.fiveMinuteCount, 301)
+        XCTAssertLessThanOrEqual(buffer.oneHourCount, 3601)
+    }
+    
     func testSampleEquality() {
         let timestamp1 = Date()
         let timestamp2 = timestamp1.addingTimeInterval(1.0)
