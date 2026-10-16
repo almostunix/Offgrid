@@ -48,9 +48,8 @@ public struct LiveChartsScreen: View {
                         .frame(height: 300)
                         .padding(.horizontal)
                 }
-                .background(.regularMaterial)
-                .cornerRadius(16)
-                .shadow(radius: 3)
+                .background(OffgridTheme.surface)
+                .cornerRadius(OffgridTheme.tileRadius)
                 .padding(.horizontal)
                 
                 // Power Flow Chart
@@ -63,13 +62,14 @@ public struct LiveChartsScreen: View {
                         .frame(height: 300)
                         .padding(.horizontal)
                 }
-                .background(.regularMaterial)
-                .cornerRadius(16)
-                .shadow(radius: 3)
+                .background(OffgridTheme.surface)
+                .cornerRadius(OffgridTheme.tileRadius)
                 .padding(.horizontal)
             }
+            .background(OffgridTheme.background)
             .padding(.vertical)
         }
+        .scrollContentBackground(.hidden)
         .navigationTitle("Live Charts")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -93,7 +93,7 @@ private struct BatteryChart: View {
             timeRange: timeRange,
             series: .batterySoc,
             seriesName: "Battery SoC",
-            color: .blue,
+            color: OffgridTheme.battery,
             showStats: true
         )
     }
@@ -110,7 +110,7 @@ private struct PowerFlowChart: View {
             timeRange: timeRange,
             series: .pvPower,
             seriesName: "PV Power",
-            color: .green,
+            color: OffgridTheme.solar,
             showStats: true
         )
     }

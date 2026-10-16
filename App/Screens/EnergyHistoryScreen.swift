@@ -46,7 +46,7 @@ public struct EnergyHistoryScreen: View {
                 // Data source caption
                 Text(dataSourceCaption)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(OffgridTheme.textSecondary)
                     .padding(.horizontal)
                 
                 // Chart
@@ -58,18 +58,20 @@ public struct EnergyHistoryScreen: View {
                     VStack {
                         Image(systemName: "chartbar.xaxis")
                             .font(.largeTitle)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(OffgridTheme.textSecondary)
                         Text("No solar charger data available")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(OffgridTheme.textSecondary)
                     }
                     .frame(height: 400)
                     .padding()
                 }
             }
+            .background(OffgridTheme.background)
             .refreshable {
                 onRefresh?()
             }
         }
+        .scrollContentBackground(.hidden)
         .navigationTitle("Energy History")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -112,14 +114,14 @@ private struct SolarYieldChart: View {
                     x: .value("Date", bar.date),
                     y: .value("kWh", bar.kWh)
                 )
-                .foregroundStyle(.yellow)
+                .foregroundStyle(OffgridTheme.solar)
             }
             
             if let maxValue = bars.map(\.kWh).max() {
                 RuleMark(
                     y: .value("Max", maxValue)
                 )
-                .foregroundStyle(.gray.opacity(0.3))
+                .foregroundStyle(OffgridTheme.textSecondary.opacity(0.3))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [5]))
             }
         }
@@ -138,7 +140,7 @@ private struct SolarYieldChart: View {
             }
         }
         .chartPlotStyle { 
-            $0.background(.regularMaterial)
+            $0.background(OffgridTheme.surface)
         }
         .frame(maxWidth: .infinity)
     }

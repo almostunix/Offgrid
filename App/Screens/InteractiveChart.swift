@@ -50,7 +50,7 @@ public struct InteractiveChart: View {
             // Show selection crosshair
             if let selection = chartSelection {
                 RuleMark(x: .value("Selection", selection))
-                    .foregroundStyle(Color.gray)
+                    .foregroundStyle(OffgridTheme.textSecondary)
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [5]))
 
                 // Show value at selection point
@@ -133,7 +133,7 @@ public struct InteractiveChart: View {
         .chartXSelection(value: $chartSelection)
         .chartOverlay { proxy in
             GeometryReader { geometry in
-                Rectangle().fill(Color.clear).contentShape(Rectangle())
+                Rectangle().fill(OffgridTheme.background).contentShape(Rectangle())
                     .gesture(
                         MagnifyGesture()
                             .onChanged { value in
@@ -177,16 +177,8 @@ public struct InteractiveChart: View {
         .overlay(alignment: .top) {
             // Crosshair readout
             if let selection = chartSelection, let value = getValue(at: selection) {
-                VStack {
-                    Text("Time: \(selection.formatted(date: .omitted, time: .standard))")
-                    Text("Value: \(String(format: "%.1f", value))")
-                }
-                .font(.caption)
-                .padding(8)
-                .background(Color.black.opacity(0.7))
-                .foregroundStyle(Color.white)
-                .cornerRadius(6)
-                .padding(.top, 8)
+                CrosshairReadout(selection: selection, value: value)
+                    .padding(.top, 8)
             }
         }
     }
@@ -256,5 +248,23 @@ public struct InteractiveChart: View {
         
         let now = Date()
         return samples.first!.timestamp ... now
+    }
+}
+
+/// Crosshair readout showing time and value
+private struct CrosshairReadout: View {
+    let selection: Date
+    let value: Double
+
+    var body: some View {
+        VStack {
+            Text("Time: \(selection.formatted(date: .omitted, time: .standard))")
+            Text("Value: \(String(format: "%.1f", value))")
+        }
+        .font(OffgridTheme.numberFont(size: 12))
+        .padding(8)
+        .background(OffgridTheme.surface)
+        .foregroundStyle(OffgridTheme.textPrimary)
+        .cornerRadius(OffgridTheme.tileRadius)
     }
 }
