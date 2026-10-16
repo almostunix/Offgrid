@@ -71,4 +71,21 @@ final class TrustAttemptTests: XCTestCase {
         let result = attempt.pin(for: profile)
         XCTAssertNil(result)
     }
+
+    /// The manual-TLS path used to store only the fingerprint, so the prompt (which needs host, port and fingerprint)
+    /// came up empty. Both paths now go through completed(fingerprint:).
+    func testCompletedAttemptCarriesHostPortAndFingerprint() {
+        let manual = ConnectionProfile(name: "192.0.2.10", host: "192.0.2.10", port: 8883, useTLS: true)
+        let done = TrustAttempt(id: UUID(), profile: manual).completed(fingerprint: String(repeating: "ab", count: 32))
+        XCTAssertEqual(done.host, "192.0.2.10")
+        XCTAssertEqual(done.port, 8883)
+        XCTAssertEqual(done.fingerprint, String(repeating: "ab", count: 32))
+        XCTAssertEqual(done.pin(for: manual), String(repeating: "ab", count: 32))
+    }
+
+    func testCompletedKeepsTheAttemptId() {
+        let id = UUID()
+        let profile = ConnectionProfile(name: "A", host: "192.0.2.10", port: 8883, useTLS: true)
+        XCTAssertTrue(TrustAttempt(id: id, profile: profile).completed(fingerprint: "ff").accepts(resultFor: id))
+    }
 }

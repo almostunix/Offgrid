@@ -406,48 +406,7 @@ class ConnectViewModel: ObservableObject {
             
             // Check if trust prompt is needed
             if needsTrustPrompt(for: profile) {
-                // Create a new trust attempt
-                let attemptId = UUID()
-                trustAttempt = TrustAttempt(id: attemptId, profile: profile)
-                trustPromptProfile = profile
-                
-                // Fetch server fingerprint
-                guard let port = UInt16(exactly: profile.port), port > 0 else { connectionState = .failed(.invalidPort(profile.port)); return }
-                ConnectionManager.fetchServerFingerprint(host: profile.host, port: port) { [weak self] result in
-                    DispatchQueue.main.async {
-                        switch result {
-                        case .success(let fingerprint):
-                            // Only apply the result if this attempt is still current
-                            guard let self = self, 
-                                  let attempt = self.trustAttempt, 
-                                  attempt.accepts(resultFor: attemptId) else {
-                                return
-                            }
-                            
-                            // Store the fingerprint with the attempt
-                            self.trustAttempt = TrustAttempt(id: attemptId, profile: profile, 
-                                                          fingerprint: fingerprint, 
-                                                          host: profile.host, 
-                                                          port: profile.port)
-                            self.trustPromptFingerprint = fingerprint
-                            self.trustPromptHost = profile.host
-                            self.trustPromptPort = profile.port
-                            self.showingTrustPrompt = true
-                        case .failure(let error):
-                            // Only apply the result if this attempt is still current
-                            guard let self = self, 
-                                  let attempt = self.trustAttempt, 
-                                  attempt.accepts(resultFor: attemptId) else {
-                                return
-                            }
-                            
-                            // Clear trust attempt state and show error
-                            self.trustPromptProfile = nil
-                            self.trustAttempt = nil
-                            self.connectionState = .failed(error)
-                        }
-                    }
-                }
+                startTrustPrompt(for: profile)
             } else {
                 // No prompts needed, connect directly
                 connectionManager = try ConnectionManager(profile: profile, liveDataStore: liveDataStore, password: password)
@@ -462,6 +421,40 @@ class ConnectViewModel: ObservableObject {
         } catch {
             print("Failed to connect: " + error.localizedDescription)
             connectionState = .failed(.unknown(error.localizedDescription))
+        }
+    }
+
+    /// Trust on first use, shared by saved and manual connections: fetch the server certificate for this one
+    /// attempt and show the prompt. A result that arrives after another attempt started is ignored (T-73).
+    private func startTrustPrompt(for profile: ConnectionProfile) {
+        let attemptId = UUID()
+        trustAttempt = TrustAttempt(id: attemptId, profile: profile)
+        trustPromptProfile = profile
+        guard let port = UInt16(exactly: profile.port), port > 0 else {
+            trustAttempt = nil
+            trustPromptProfile = nil
+            connectionState = .failed(.invalidPort(profile.port))
+            return
+        }
+        ConnectionManager.fetchServerFingerprint(host: profile.host, port: port) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self, let attempt = self.trustAttempt, attempt.accepts(resultFor: attemptId) else { return }
+                switch result {
+                case .success(let fingerprint):
+                    let done = attempt.completed(fingerprint: fingerprint)
+                    self.trustAttempt = done
+                    self.trustPromptFingerprint = done.fingerprint
+                    self.trustPromptHost = done.host
+                    self.trustPromptPort = done.port
+                    self.showingTrustPrompt = true
+                case .failure(let error):
+                    self.trustAttempt = nil
+                    self.trustPromptProfile = nil
+                    self.trustPromptFingerprint = nil
+                    self.showingTrustPrompt = false
+                    self.connectionState = .failed(error)
+                }
+            }
         }
     }
 
@@ -483,38 +476,7 @@ class ConnectViewModel: ObservableObject {
         
         // Check if trust prompt is needed
         if needsTrustPrompt(for: profile) {
-            // Create a new trust attempt
-            let attemptId = UUID()
-            trustAttempt = TrustAttempt(id: attemptId, profile: profile)
-            trustPromptProfile = profile
-            
-            // Fetch server fingerprint
-            guard let port = UInt16(exactly: profile.port), port > 0 else { connectionState = .failed(.invalidPort(profile.port)); return }
-            ConnectionManager.fetchServerFingerprint(host: profile.host, port: port) { [weak self] result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success(let fingerprint):
-                        // Only apply the result if this attempt is still current
-                        guard let self = self, let attempt = self.trustAttempt, attempt.accepts(resultFor: attemptId) else { return }
-                        
-                        // Store fingerprint and show trust prompt
-                        self.trustAttempt = TrustAttempt(id: attemptId, profile: profile, fingerprint: fingerprint, host: profile.host, port: profile.port)
-                        self.trustPromptFingerprint = fingerprint
-                        self.showingTrustPrompt = true
-                        
-                    case .failure(let error):
-                        // Only apply the result if this attempt is still current
-                        guard let self = self, let attempt = self.trustAttempt, attempt.accepts(resultFor: attemptId) else { return }
-                        
-                        // Clear trust attempt state and show error
-                        self.trustAttempt = nil
-                        self.trustPromptProfile = nil
-                        self.trustPromptFingerprint = nil
-                        self.showingTrustPrompt = false
-                        self.connectionState = .failed(error)
-                    }
-                }
-            }
+            startTrustPrompt(for: profile)
             return
         }
         

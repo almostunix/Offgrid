@@ -29,6 +29,12 @@ public struct TrustAttempt {
         return self.id == id
     }
 
+    /// The attempt after its certificate fetch succeeded: the fingerprint together with the profile's own host and
+    /// port, so the prompt always shows (and pin(for:) always checks) the address the fingerprint was fetched from.
+    public func completed(fingerprint: String) -> TrustAttempt {
+        TrustAttempt(id: id, profile: profile, fingerprint: fingerprint, host: profile.host, port: profile.port)
+    }
+
     /// Gets the fingerprint to pin for a profile if the attempt is still valid
     /// - Parameter profile: The profile to check against
     /// - Returns: The fingerprint to pin, or nil if host/port don't match
