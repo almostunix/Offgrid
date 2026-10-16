@@ -46,8 +46,8 @@ public final class AlarmStore: ObservableObject {
     private let now: () -> Date
     private let logger = Logger(subsystem: "com.almostunix.offgrid", category: "AlarmStore")
 
-    public private(set) var alarms: [String: AlarmState] = [:]
-    public private(set) var log: [AlarmState] = []
+    @Published public private(set) var alarms: [String: AlarmState] = [:]
+    @Published public private(set) var log: [AlarmState] = []
 
     public var active: [AlarmState] {
         alarms.values.filter { $0.level > .ok }
@@ -131,14 +131,14 @@ public final class AlarmStore: ObservableObject {
         let currentAlarm = alarms[alarmId]
         let isNewOrChanged = currentAlarm == nil || currentAlarm?.level != level
 
-        // Update or add the alarm
+        // Update or add the alarm - preserve original start time if level hasn't changed
         let alarmState = AlarmState(
             id: alarmId,
             service: parsedTopic.service,
             instance: parsedTopic.instance,
             name: alarmName,
             level: level,
-            since: now()
+            since: isNewOrChanged ? now() : currentAlarm?.since ?? now()
         )
 
         alarms[alarmId] = alarmState

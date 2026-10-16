@@ -601,12 +601,13 @@ public final class LiveDataStore: ObservableObject {
             }
         } else if path.count == 1 && path[0] == "State" {
             if case .number(let value) = message.value {
+                let state = Int(exactly: value.rounded()) ?? nil
                 solarCharger = SolarChargerModel(productName: solarCharger.productName, 
                                                pvVoltage: solarCharger.pvVoltage, 
                                                yieldPower: solarCharger.yieldPower, 
                                                dcVoltage: solarCharger.dcVoltage, 
                                                dcCurrent: solarCharger.dcCurrent, 
-                                               state: Int(value))
+                                               state: state)
             } else if case .null = message.value {
                 solarCharger = SolarChargerModel(productName: solarCharger.productName, 
                                                pvVoltage: solarCharger.pvVoltage, 

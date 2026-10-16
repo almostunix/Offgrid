@@ -95,8 +95,13 @@ public struct TimeFormatter {
 
     /// Format time-to-go value for display
     /// - Parameter seconds: Time in seconds
-    /// - Returns: Formatted string (e.g., "2:30h")
+    /// - Returns: Formatted string (e.g., "2:30h") or "–" if value is invalid
     public static func formatTimeToGo(_ seconds: Double) -> String {
+        // Return "–" for non-finite, negative, or excessively large values
+        guard seconds.isFinite && seconds >= 0 else { return "–" }
+        let maxDays = Double(100 * 24 * 3600)
+        guard seconds <= maxDays else { return "–" }
+        
         let hours = Int(seconds / 3600)
         let minutes = Int((seconds.truncatingRemainder(dividingBy: 3600)) / 60)
         return String(format: "%d:%02dh", hours, minutes)

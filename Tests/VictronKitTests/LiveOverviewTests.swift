@@ -163,4 +163,28 @@ final class LiveOverviewTests: XCTestCase {
         // Inverter state should be 9 (Inverting)
         XCTAssertEqual(store.inverters["276"]?.state, 9)
     }
+
+    // MARK: - formatTimeToGo Tests
+
+    func testFormatTimeToGoNormalValues() {
+        // Test normal values
+        XCTAssertEqual(TimeFormatter.formatTimeToGo(3600), "1:00h")  // 1 hour
+        XCTAssertEqual(TimeFormatter.formatTimeToGo(9000), "2:30h")  // 2 hours 30 minutes
+        XCTAssertEqual(TimeFormatter.formatTimeToGo(0), "0:00h")     // 0 hours
+    }
+
+    func testFormatTimeToGoEdgeCases() {
+        // Test edge cases that should return "–"
+        XCTAssertEqual(TimeFormatter.formatTimeToGo(.infinity), "–")
+        XCTAssertEqual(TimeFormatter.formatTimeToGo(.nan), "–")
+        XCTAssertEqual(TimeFormatter.formatTimeToGo(1e300), "–")     // Huge value
+        XCTAssertEqual(TimeFormatter.formatTimeToGo(-5), "–")        // Negative value
+        
+        // Test maximum allowed value (just under 100 days)
+        let maxDays = Double(100 * 24 * 3600)
+        XCTAssertEqual(TimeFormatter.formatTimeToGo(maxDays - 3600), String(format: "%d:%02dh", Int(maxDays / 3600) - 1, 0))
+        
+        // Test value over 100 days
+        XCTAssertEqual(TimeFormatter.formatTimeToGo(maxDays + 3600), "–")
+    }
 }

@@ -150,6 +150,11 @@ private struct BatteryDetailView: View {
     
     /// Format time in hours and minutes
     private func formattedTime(_ seconds: Double) -> String {
+        // Return "–" for non-finite, negative, or excessively large values
+        guard seconds.isFinite && seconds >= 0 else { return "–" }
+        let maxDays = Double(100 * 24 * 3600)
+        guard seconds <= maxDays else { return "–" }
+        
         let hours = Int(seconds) / 3600
         let minutes = Int(seconds) % 3600 / 60
         return String(format: "%dh %dm", hours, minutes)

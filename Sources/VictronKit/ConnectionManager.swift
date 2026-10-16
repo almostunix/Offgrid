@@ -112,7 +112,10 @@ public final class ConnectionManager {
             self.refused = nil
             self.mqtt.autoReconnect = true
             self.state = .connecting
-            _ = self.mqtt.connect()
+            let success = self.mqtt.connect()
+            if !success {
+                self.state = .failed(.connectionRefused)
+            }
         }
     }
 

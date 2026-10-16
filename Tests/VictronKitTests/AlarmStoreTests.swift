@@ -248,6 +248,78 @@ final class AlarmStoreTests: XCTestCase {
         XCTAssertEqual(alarm?.name, "L1/Overload")
     }
 
+    func testPublishedPropertiesNotifyOnChange() {
+        let store = AlarmStore(now: { Date(timeIntervalSince1970: 1000000) })
+        
+        // Test that alarms property is published by checking objectWillChange
+        let expectation = XCTestExpectation(description: "Alarms should be published")
+        let observer = store.objectWillChange.sink { _ in
+            expectation.fulfill()
+        }
+        
+        // Add an alarm to trigger changes
+        let topic = "N/test/battery/279/Alarms/LowSoc"
+        let payload = ["value": 2]
+        let payloadData = try! JSONSerialization.data(withJSONObject: payload)
+        store.handle(topic: topic, payload: payloadData)
+        
+        // Wait for expectation
+        wait(for: [expectation], timeout: 1.0)
+        
+        // Clean up observer
+        observer.cancel()
+    }
+
+    func testAlarmPreservesStartTimeWhenLevelUnchanged() throws {
+        // Use a controlled clock
+        var callCount = 0
+        let store = AlarmStore(now: {
+            callCount += 1
+            return Date(timeIntervalSince1970: Double(callCount * 1000))
+        })
+        
+        let topic = "N/test/battery/279/Alarms/LowSoc"
+        let alarmId = "battery/279/LowSoc"   // AlarmStore keys by <service>/<instance>/<name>
+        let payload1 = ["value": 1]  // Warning level
+        let payloadData1 = try JSONSerialization.data(withJSONObject: payload1)
+        
+        // First alarm with warning level
+        store.handle(topic: topic, payload: payloadData1)
+        let firstAlarm = store.alarms[alarmId]
+        XCTAssertNotNil(firstAlarm?.since)
+        let firstSince = firstAlarm?.since
+        
+        // Wait a bit (simulated by callCount increment)
+        callCount += 1
+        
+        // Same alarm with same warning level (should preserve original start time)
+        store.handle(topic: topic, payload: payloadData1)
+        let sameLevelAlarm = store.alarms[alarmId]
+        let sameLevelSince = sameLevelAlarm?.since
+        
+        // Start times should be the same
+        XCTAssertEqual(firstSince, sameLevelSince)
+        
+        // Change to alarm level (should update start time)
+        let payload2 = ["value": 2]  // Alarm level
+        let payloadData2 = try JSONSerialization.data(withJSONObject: payload2)
+        store.handle(topic: topic, payload: payloadData2)
+        let levelChangedAlarm = store.alarms[alarmId]
+        let levelChangedSince = levelChangedAlarm?.since
+        
+        // Start time should be different (new)
+        XCTAssertNotEqual(firstSince, levelChangedSince)
+        
+        // Change back to warning level (should update start time again)
+        callCount += 1
+        store.handle(topic: topic, payload: payloadData1)
+        let backToWarningAlarm = store.alarms[alarmId]
+        let backToWarningSince = backToWarningAlarm?.since
+        
+        // Start time should be different from alarm level
+        XCTAssertNotEqual(levelChangedSince, backToWarningSince)
+    }
+    
     func testResetClearsAlarmsAndLog() throws {
         let store = AlarmStore(now: { Date(timeIntervalSince1970: 1000000) })
         

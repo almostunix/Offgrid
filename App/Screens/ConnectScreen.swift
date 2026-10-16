@@ -434,10 +434,17 @@ class ConnectViewModel: ObservableObject {
                             self.trustPromptPort = profile.port
                             self.showingTrustPrompt = true
                         case .failure(let error):
-                            print("Failed to fetch server fingerprint: " + error.localizedDescription)
-                            self?.trustPromptProfile = nil
-                            self?.trustAttempt = nil
-                            self?.connectionState = .failed(error)
+                            // Only apply the result if this attempt is still current
+                            guard let self = self, 
+                                  let attempt = self.trustAttempt, 
+                                  attempt.accepts(resultFor: attemptId) else {
+                                return
+                            }
+                            
+                            // Clear trust attempt state and show error
+                            self.trustPromptProfile = nil
+                            self.trustAttempt = nil
+                            self.connectionState = .failed(error)
                         }
                     }
                 }
@@ -473,6 +480,43 @@ class ConnectViewModel: ObservableObject {
         
         let port = Int(portString) ?? 1883
         let profile = ConnectionProfile(name: host, host: host, port: port, useTLS: useTLS, username: username.isEmpty ? nil : username)
+        
+        // Check if trust prompt is needed
+        if needsTrustPrompt(for: profile) {
+            // Create a new trust attempt
+            let attemptId = UUID()
+            trustAttempt = TrustAttempt(id: attemptId, profile: profile)
+            trustPromptProfile = profile
+            
+            // Fetch server fingerprint
+            guard let port = UInt16(exactly: profile.port), port > 0 else { connectionState = .failed(.invalidPort(profile.port)); return }
+            ConnectionManager.fetchServerFingerprint(host: profile.host, port: port) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let fingerprint):
+                        // Only apply the result if this attempt is still current
+                        guard let self = self, let attempt = self.trustAttempt, attempt.accepts(resultFor: attemptId) else { return }
+                        
+                        // Store fingerprint and show trust prompt
+                        self.trustAttempt = TrustAttempt(id: attemptId, profile: profile, fingerprint: fingerprint, host: profile.host, port: profile.port)
+                        self.trustPromptFingerprint = fingerprint
+                        self.showingTrustPrompt = true
+                        
+                    case .failure(let error):
+                        // Only apply the result if this attempt is still current
+                        guard let self = self, let attempt = self.trustAttempt, attempt.accepts(resultFor: attemptId) else { return }
+                        
+                        // Clear trust attempt state and show error
+                        self.trustAttempt = nil
+                        self.trustPromptProfile = nil
+                        self.trustPromptFingerprint = nil
+                        self.showingTrustPrompt = false
+                        self.connectionState = .failed(error)
+                    }
+                }
+            }
+            return
+        }
         
         // Check if plaintext password warning is needed
         if needsPlaintextPasswordWarning(for: profile, password: password.isEmpty ? nil : password) {
@@ -666,24 +710,26 @@ class ConnectViewModel: ObservableObject {
         }
         
         connectionManager?.onMessage = { [weak self] topic in
-            // Only process callbacks from the current manager
-            guard let self = self, self.connectionManager === manager else { return }
-            
-            // Check if this is a history message
-            if topic.contains("/History/") {
-                // Cancel any pending save
-                self.historySaveWork?.cancel()
+            DispatchQueue.main.async {
+                // Only process callbacks from the current manager
+                guard let self = self, self.connectionManager === manager else { return }
                 
-                // Schedule a debounced save on main thread
-                let workItem = DispatchWorkItem { [weak self] in
-                    if let store = self?.connectionManager?.historyStore, 
-                       let portalId = self?.portalId {
-                        self?.historyCache.store(store, portalId: portalId, fetchedAt: Date())
+                // Check if this is a history message
+                if topic.contains("/History/") {
+                    // Cancel any pending save
+                    self.historySaveWork?.cancel()
+                    
+                    // Schedule a debounced save on main thread
+                    let workItem = DispatchWorkItem { [weak self] in
+                        if let store = self?.connectionManager?.historyStore, 
+                           let portalId = self?.portalId {
+                            self?.historyCache.store(store, portalId: portalId, fetchedAt: Date())
+                        }
                     }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
+                    self.historySaveWork = workItem
                 }
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
-                self.historySaveWork = workItem
             }
         }
     }
