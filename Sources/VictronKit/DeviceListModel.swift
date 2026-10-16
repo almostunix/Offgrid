@@ -48,6 +48,11 @@ public struct DeviceRow: Identifiable, Equatable, Hashable {
 
 /// Device list model for building device rows from LiveDataStore
 public enum DeviceListModel {
+    /// Get device by ID
+    public static func row(id: String, from store: LiveDataStore) -> DeviceRow? {
+        return rows(from: store).first { $0.id == id }
+    }
+    
     /// Get all devices as a flat list
     public static func rows(from store: LiveDataStore) -> [DeviceRow] {
         var devices: [DeviceRow] = []

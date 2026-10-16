@@ -10,7 +10,7 @@ import VictronKit
 /// Device split view screen showing device list on sidebar and device detail on detail panel
 public struct DeviceSplitViewScreen: View {
     @ObservedObject var store: LiveDataStore
-    @State private var selectedDevice: DeviceRow?
+    @State private var selectedDeviceId: String?
 
     public init(store: LiveDataStore) {
         self.store = store
@@ -19,12 +19,14 @@ public struct DeviceSplitViewScreen: View {
     public var body: some View {
         NavigationSplitView {
             // Sidebar: Device List
-            DeviceListSidebar(store: store, selectedDevice: $selectedDevice)
+            DeviceListSidebar(store: store, selectedDeviceId: $selectedDeviceId)
                 .navigationTitle("Devices")
         } detail: {
             // Detail: Device Detail
-            if let selectedDevice = selectedDevice {
-                DeviceDetailScreen(device: selectedDevice, store: store)
+            if let id = selectedDeviceId, let row = DeviceListModel.row(id: id, from: store) {
+                DeviceDetailScreen(device: row, store: store)
+            } else if selectedDeviceId != nil {
+                Text("Device no longer available")
             } else {
                 ContentUnavailableView("Select a Device",
                                      systemImage: "powercord.batteryapple",
@@ -38,13 +40,13 @@ public struct DeviceSplitViewScreen: View {
 /// Device list sidebar for the split view
 private struct DeviceListSidebar: View {
     @ObservedObject var store: LiveDataStore
-    @Binding var selectedDevice: DeviceRow?
+    @Binding var selectedDeviceId: String?
 
     var body: some View {
-        List(selection: $selectedDevice) {
+        List(selection: $selectedDeviceId) {
             ForEach(rows) { device in
                 DeviceListRow(device: device)
-                    .tag(device as DeviceRow?)
+                    .tag(device.id as String?)
             }
         }
         .overlay {

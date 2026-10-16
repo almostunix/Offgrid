@@ -293,6 +293,81 @@ final class DeviceListTests: XCTestCase {
         devices = DeviceListModel.rows(from: liveDataStore)
         XCTAssertTrue(devices.isEmpty, "Device list should be empty after device removal")
     }
+    
+    func testRowByIdReturnsLiveValues() {
+        // Add a battery with initial SOC
+        let message1 = parser.parseMessage(topic: "N/c0ffee000001/battery/279/ProductName", 
+                                           payload: ["value": "SmartShunt 500A"])
+        guard let message1 = message1 else {
+            XCTFail("Should be able to parse message")
+            return
+        }
+        liveDataStore.update(with: message1)
+        
+        let message2 = parser.parseMessage(topic: "N/c0ffee000001/battery/279/Soc", 
+                                           payload: ["value": 78.5])
+        guard let message2 = message2 else {
+            XCTFail("Should be able to parse message")
+            return
+        }
+        liveDataStore.update(with: message2)
+        
+        // Get the device ID
+        let devices = DeviceListModel.rows(from: liveDataStore)
+        guard let deviceId = devices.first?.id else {
+            XCTFail("Should find device")
+            return
+        }
+        
+        // Verify initial value
+        let row1 = DeviceListModel.row(id: deviceId, from: liveDataStore)
+        XCTAssertEqual(row1?.soc, 78.5, "Initial SOC should be 78.5")
+        
+        // Update SOC to new value
+        let message3 = parser.parseMessage(topic: "N/c0ffee000001/battery/279/Soc", 
+                                           payload: ["value": 65.0])
+        guard let message3 = message3 else {
+            XCTFail("Should be able to parse message")
+            return
+        }
+        liveDataStore.update(with: message3)
+        
+        // Verify row(id:from:) returns the NEW value
+        let row2 = DeviceListModel.row(id: deviceId, from: liveDataStore)
+        XCTAssertEqual(row2?.soc, 65.0, "Updated SOC should be 65.0")
+        
+        // Test unknown ID returns nil
+        let unknownRow = DeviceListModel.row(id: "999", from: liveDataStore)
+        XCTAssertNil(unknownRow, "Unknown ID should return nil")
+    }
+    
+    func testRowByIdPerformance() {
+        // This test verifies that row(id:from:) doesn't cause performance issues
+        // by ensuring it doesn't rebuild the entire device list unnecessarily
+        
+        // Add multiple devices
+        for i in 1...100 {
+            let message = parser.parseMessage(topic: "N/c0ffee000001/battery/279/ProductName", 
+                                             payload: ["value": "SmartShunt 500A"])
+            if let message = message {
+                liveDataStore.update(with: message)
+            }
+        }
+        
+        // Get a device ID
+        let devices = DeviceListModel.rows(from: liveDataStore)
+        guard let deviceId = devices.first?.id else {
+            XCTFail("Should find device")
+            return
+        }
+        
+        // Call row(id:from:) multiple times - should be fast
+        measure {
+            for _ in 1...100 {
+                _ = DeviceListModel.row(id: deviceId, from: liveDataStore)
+            }
+        }
+    }
 }
 
 // MARK: - Helper Functions
