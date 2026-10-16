@@ -1,0 +1,10 @@
+HTTP/1.1 200 OK
+CACHE-CONTROL: max-age=1800
+DATE: Mon, 15 Oct 2026 12:00:00 GMT
+EXT:
+LOCATION: http://192.168.1.21:8080/description.xml
+OPT: "http://schemas.upnp.org/upnp/1/0/"; ns=01
+SERVER: Linux/5.4.0-91-generic, UPnP/1.0, Portable SDK for UPnP devices/1.6.19
+ST: urn:schemas-upnp-org:device:Basic:1
+USN: uuid:com.victronenergy.ccgx.C0:FF:EE:00:00:01::urn:schemas-upnp-org:device:Basic:1
+X-User-Agent: redsonic

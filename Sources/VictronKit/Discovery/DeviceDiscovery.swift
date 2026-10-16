@@ -11,8 +11,33 @@ public class DeviceDiscovery: DeviceDiscovering {
     private var discoveryTask: DispatchWorkItem?
     private var onUpdate: ([DiscoveredDevice]) -> Void = { _ in }
     private let discoveryQueue = DispatchQueue(label: "VictronKit.discovery", qos: .utility)
+    private var activeSweeper: SSDPSweeper?
+    
+    private let resolveVenusLocalImpl: (() -> [DiscoveredDevice]?)?
+    private let interfaceImpl: (() -> IPv4Interface?)?
+    private let makeTransportImpl: (() -> DatagramTransport)?
+    private let describeImpl: ((URL) -> DeviceDescription?)?
+    private let sweepListenImpl: TimeInterval?
 
-    public init() {}
+    public init() {
+        self.resolveVenusLocalImpl = nil
+        self.interfaceImpl = nil
+        self.makeTransportImpl = nil
+        self.describeImpl = nil
+        self.sweepListenImpl = nil
+    }
+
+    init(resolveVenusLocal: @escaping () -> [DiscoveredDevice]? = { nil }, 
+          interface: @escaping () -> IPv4Interface? = SubnetSweep.wifiInterface, 
+          makeTransport: @escaping () -> DatagramTransport = { UDPDatagramTransport() }, 
+          describe: ((URL) -> DeviceDescription?)? = nil, 
+          sweepListen: TimeInterval = 3.0) {
+        self.resolveVenusLocalImpl = resolveVenusLocal
+        self.interfaceImpl = interface
+        self.makeTransportImpl = makeTransport
+        self.describeImpl = describe
+        self.sweepListenImpl = sweepListen
+    }
 
     public func start(onUpdate: @escaping ([DiscoveredDevice]) -> Void) {
         self.onUpdate = onUpdate
@@ -30,7 +55,12 @@ public class DeviceDiscovery: DeviceDiscovering {
         discoveryTask = nil
     }
 
-    private func discoverDevice() {
+    private func venusLocalDevices() -> [DiscoveredDevice] {
+        // Use injected resolver if available
+        if let resolver = resolveVenusLocalImpl {
+            return resolver() ?? []
+        }
+        
         // Step 1: Resolve venus.local to IPv4
         let host = "venus.local"
         var hint = addrinfo()
@@ -41,19 +71,17 @@ public class DeviceDiscovery: DeviceDiscovering {
         let error = getaddrinfo(host, nil, &hint, &result)
 
         guard error == 0, result != nil else {
-            // No device found
-            onUpdate([])
             freeaddrinfo(result)
-            return
+            return []
         }
 
         defer { freeaddrinfo(result) }
 
         // Get the IPv4 address as text
-        guard let addr = result?.pointee.ai_addr, result?.pointee.ai_family == AF_INET else { onUpdate([]); return }
+        guard let addr = result?.pointee.ai_addr, result?.pointee.ai_family == AF_INET else { return [] }
         var sin = addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { $0.pointee }
         var buffer = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
-        guard inet_ntop(AF_INET, &sin.sin_addr, &buffer, socklen_t(INET_ADDRSTRLEN)) != nil else { onUpdate([]); return }
+        guard inet_ntop(AF_INET, &sin.sin_addr, &buffer, socklen_t(INET_ADDRSTRLEN)) != nil else { return [] }
         let ipAddress = String(cString: buffer)
 
         // Step 2: Send SSDP M-SEARCH to resolved IP
@@ -61,13 +89,13 @@ public class DeviceDiscovery: DeviceDiscovering {
         let reply = sendSSDPRequest(request: ssdpRequest, ipAddress: ipAddress)
 
         // Step 3: Parse SSDP reply and fetch device description
+        var venusDevices: [DiscoveredDevice] = []
         if let (portalId, location) = SSDPReply.parse(reply, from: ipAddress) {
             // Fetch device description
             if let description = fetchDeviceDescription(from: location) {
                 // Validate manufacturer
                 guard description.manufacturer == "Victron Energy" else {
-                    onUpdate([])
-                    return
+                    return []
                 }
 
                 let device = DiscoveredDevice(
@@ -79,7 +107,7 @@ public class DeviceDiscovery: DeviceDiscovering {
                     venusVersion: description.venusVersion,
                     lastSeen: Date()
                 )
-                onUpdate([device])
+                venusDevices.append(device)
             } else {
                 // Description fetch failed, create minimal device
                 let device = DiscoveredDevice(
@@ -89,7 +117,7 @@ public class DeviceDiscovery: DeviceDiscovering {
                     portalId: portalId,
                     lastSeen: Date()
                 )
-                onUpdate([device])
+                venusDevices.append(device)
             }
         } else {
             // No valid SSDP reply, create minimal device
@@ -99,11 +127,81 @@ public class DeviceDiscovery: DeviceDiscovering {
                 host: ipAddress,
                 lastSeen: Date()
             )
-            onUpdate([device])
+            venusDevices.append(device)
+        }
+
+        return venusDevices
+    }
+
+    private func discoverDevice() {
+        // Step 1: Resolve venus.local to IPv4
+        let venus = venusLocalDevices()
+
+        // Step 2: Perform subnet sweep if Wi-Fi interface is available
+        performSubnetSweep(existingPortalIds: Set(venus.compactMap { $0.portalId })) { [weak self] swept in 
+            guard let self = self else { return }
+            self.onUpdate(venus + swept)
         }
     }
 
-    private func createSSDPRequest(ipAddress: String) -> String {
+    private func performSubnetSweep(existingPortalIds: Set<String>, completion: @escaping ([DiscoveredDevice]) -> Void) {
+        // An injected interface provider is final, even when it returns nil (tests must never fall back to the real Wi-Fi).
+        let iface = interfaceImpl.map { $0() } ?? SubnetSweep.wifiInterface()
+        guard let iface = iface else { completion([]); return }
+        let hosts = SubnetSweep.hosts(for: iface)
+        
+        guard !hosts.isEmpty else { completion([]); return }
+        
+        let transport = makeTransportImpl?() ?? UDPDatagramTransport()
+        let listenTime = sweepListenImpl ?? 3.0
+        let sweeper = SSDPSweeper(transport: transport, interval: 0.01, listen: listenTime)
+        activeSweeper = sweeper
+        
+        sweeper.sweep(hosts: hosts, request: createSSDPRequest(ipAddress:)) { [weak self] results in
+            guard let self = self else { completion([]); return }
+            
+            var sweptDevices: [DiscoveredDevice] = []
+            
+            for result in results {
+                // Skip devices already found via venus.local
+                if existingPortalIds.contains(result.portalId) { continue }
+                
+                // Fetch device description
+                let description = self.describeImpl.map { $0(result.location) } ?? self.fetchDeviceDescription(from: result.location)
+                
+                if let description = description {
+                    // Validate manufacturer
+                    guard description.manufacturer == "Victron Energy" else { continue }
+                    
+                    let device = DiscoveredDevice(
+                        id: result.portalId,
+                        name: description.friendlyName,
+                        host: result.host,
+                        portalId: result.portalId,
+                        mqttOnLan: description.mqttOnLan,
+                        venusVersion: description.venusVersion,
+                        lastSeen: Date()
+                    )
+                    sweptDevices.append(device)
+                } else {
+                    // Description fetch failed, create minimal device
+                    let device = DiscoveredDevice(
+                        id: result.portalId,
+                        name: "Victron GX (\(result.host))",
+                        host: result.host,
+                        portalId: result.portalId,
+                        lastSeen: Date()
+                    )
+                    sweptDevices.append(device)
+                }
+            }
+            
+            self.activeSweeper = nil
+            completion(sweptDevices)
+        }
+    }
+
+    internal func createSSDPRequest(ipAddress: String) -> String {
         return "M-SEARCH * HTTP/1.1\r\n"
             + "HOST: " + ipAddress + ":1900\r\n"
             + "MAN: \"ssdp:discover\"\r\n"
