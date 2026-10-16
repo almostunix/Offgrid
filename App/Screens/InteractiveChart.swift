@@ -19,7 +19,7 @@ public struct InteractiveChart: View {
 
     // Gesture state
     @State private var chartSelection: Date?
-    @State private var zoomLevel: CGFloat = 1.0
+    @State private var gestureStartLength: TimeInterval? = nil
     @State private var panOffset: CGFloat = 0
     @State private var isZooming = false
 
@@ -138,12 +138,8 @@ public struct InteractiveChart: View {
                         MagnifyGesture()
                             .onChanged { value in
                                 isZooming = true
-                                let newZoom = value.magnification
-                                let delta = newZoom / zoomLevel
-                                
-                                // Limit zoom range
-                                let limitedDelta = max(0.1, min(10.0, delta))
-                                let newVisibleLength = visibleDomainLength / limitedDelta
+                                let start = gestureStartLength ?? visibleDomainLength
+                                gestureStartLength = start
                                 
                                 // Convert to time interval based on current visible range
                                 let timeRange = timeRange.getWindow(for: recorder, series: series)
@@ -154,11 +150,11 @@ public struct InteractiveChart: View {
                                     let minLength: TimeInterval = max(60.0, timeSpan / 20.0) // Minimum 1 minute
                                     let maxLength: TimeInterval = max(timeSpan, 3600.0) // Maximum 1 hour
                                     
-                                    visibleDomainLength = max(minLength, min(maxLength, newVisibleLength))
-                                    zoomLevel = newZoom
+                                    visibleDomainLength = ChartZoom.visibleLength(start: start, magnification: value.magnification, min: minLength, max: maxLength)
                                 }
                             }
                             .onEnded { _ in
+                                gestureStartLength = nil
                                 isZooming = false
                             }
                     )
@@ -172,7 +168,6 @@ public struct InteractiveChart: View {
         }
         .onChange(of: timeRange) { oldRange, newRange in
             // Reset zoom when time range changes
-            zoomLevel = 1.0
             visibleDomainLength = newRange == .fiveMinutes ? 300.0 : 3600.0
         }
         .onAppear {
@@ -184,7 +179,7 @@ public struct InteractiveChart: View {
             if let selection = chartSelection, let value = getValue(at: selection) {
                 VStack {
                     Text("Time: \(selection.formatted(date: .omitted, time: .standard))")
-                    Text("Value: \(value, specifier: "%.1f")")
+                    Text("Value: \(String(format: "%.1f", value))")
                 }
                 .font(.caption)
                 .padding(8)
