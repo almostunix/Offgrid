@@ -50,96 +50,121 @@ public struct LiveOverviewScreen: View {
         self.isReconnecting = isReconnecting
     }
     
+    private static func color(_ tint: OverviewTiles.Tint) -> Color {
+        switch tint {
+        case .solar: return OffgridTheme.solar
+        case .battery: return OffgridTheme.battery
+        case .grid: return OffgridTheme.grid
+        case .home: return OffgridTheme.textPrimary
+        }
+    }
+
     public var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: OffgridTheme.sectionGap) {
+                // Night v1 (docs/STYLE.md): battery ring hero and the 2×2 metric tiles
+                BatteryRing(
+                    soc: MetricFormat.percent(BatteryStatusHelper.batterySoc(from: store.system, batteries: store.batteries)).value,
+                    power: MetricFormat.watts(store.system.batteryPower ?? store.batteries.values.first?.power).value,
+                    state: ChargeState.from(batteryPower: store.system.batteryPower ?? store.batteries.values.first?.power).rawValue
+                )
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(OffgridTheme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: OffgridTheme.heroRadius))
+                .padding(.horizontal, OffgridTheme.screenPadding)
+
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: OffgridTheme.tileGap), GridItem(.flexible(), spacing: OffgridTheme.tileGap)],
+                          spacing: OffgridTheme.tileGap) {
+                    ForEach(OverviewTiles.tiles(system: store.system,
+                                                solarTodayKWh: OverviewTiles.solarTodayKWh(historyCache: historyCache, portalId: portalId)),
+                            id: \.label) { tile in
+                        MetricTile(icon: tile.icon, value: tile.value, unit: tile.unit, label: tile.label, tint: Self.color(tile.tint))
+                    }
+                }
+                .padding(.horizontal, OffgridTheme.screenPadding)
+
                 // Customizable tile dashboard (T-30); the overview stays the home screen with all the links
                 NavigationLink(destination: DashboardScreen(store: store, recorder: recorder)) {
                     Label("Dashboard", systemImage: "square.grid.2x2")
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()
-                        .background(.regularMaterial)
-                        .cornerRadius(16)
-                        .padding(.horizontal)
+                        .background(OffgridTheme.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: OffgridTheme.tileRadius))
+                        .padding(.horizontal, OffgridTheme.screenPadding)
                 }
                 // Battery Status Section
                 BatteryStatusView(store: store)
                     .padding()
-                    .background(.regularMaterial)
-                    .cornerRadius(16)
-                    .shadow(radius: 3)
-                    .padding(.horizontal)
+                    .background(OffgridTheme.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: OffgridTheme.tileRadius))
+                    .padding(.horizontal, OffgridTheme.screenPadding)
                 
                 // Power Flow Section
                 NavigationLink(destination: PowerFlowScreen(store: store)) {
                     PowerFlowView(store: store)
                         .padding()
-                        .background(.regularMaterial)
-                        .cornerRadius(16)
-                        .shadow(radius: 3)
-                        .padding(.horizontal)
+                        .background(OffgridTheme.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: OffgridTheme.tileRadius))
+                        .padding(.horizontal, OffgridTheme.screenPadding)
                 }
                 
                 // Device States Section
                 DeviceStatesView(store: store)
                     .padding()
-                    .background(.regularMaterial)
-                    .cornerRadius(16)
-                    .shadow(radius: 3)
-                    .padding(.horizontal)
+                    .background(OffgridTheme.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: OffgridTheme.tileRadius))
+                    .padding(.horizontal, OffgridTheme.screenPadding)
                 
                 // Devices Section
                 NavigationLink(destination: DeviceSplitViewScreen(store: store)) {
                     DeviceListPreview(store: store)
                         .padding()
-                        .background(.regularMaterial)
-                        .cornerRadius(16)
-                        .shadow(radius: 3)
-                        .padding(.horizontal)
+                        .background(OffgridTheme.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: OffgridTheme.tileRadius))
+                        .padding(.horizontal, OffgridTheme.screenPadding)
                 }
                 
                 // Alarm Log Section
                 NavigationLink(destination: AlarmLogScreen(alarmStore: store.alarmStore)) {
                     AlarmLogPreview(store: store)
                         .padding()
-                        .background(.regularMaterial)
-                        .cornerRadius(16)
-                        .shadow(radius: 3)
-                        .padding(.horizontal)
+                        .background(OffgridTheme.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: OffgridTheme.tileRadius))
+                        .padding(.horizontal, OffgridTheme.screenPadding)
                 }
                 
                 // Topic Explorer Section
                 NavigationLink(destination: TopicExplorerScreen(store: store)) {
                     TopicExplorerPreview(store: store)
                         .padding()
-                        .background(.regularMaterial)
-                        .cornerRadius(16)
-                        .shadow(radius: 3)
-                        .padding(.horizontal)
+                        .background(OffgridTheme.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: OffgridTheme.tileRadius))
+                        .padding(.horizontal, OffgridTheme.screenPadding)
                 }
                 
                 // Live Charts Section
                 NavigationLink(destination: LiveChartsScreen(store: store, recorder: recorder)) {
                     LiveChartsPreview(store: store)
                         .padding()
-                        .background(.regularMaterial)
-                        .cornerRadius(16)
-                        .shadow(radius: 3)
-                        .padding(.horizontal)
+                        .background(OffgridTheme.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: OffgridTheme.tileRadius))
+                        .padding(.horizontal, OffgridTheme.screenPadding)
                 }
                 
                 // Energy History Section
                 NavigationLink(destination: EnergyHistoryScreen(historyCache: historyCache, isDemo: isDemo, portalId: portalId)) {
                     EnergyHistoryPreview()
                         .padding()
-                        .background(.regularMaterial)
-                        .cornerRadius(16)
-                        .shadow(radius: 3)
-                        .padding(.horizontal)
+                        .background(OffgridTheme.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: OffgridTheme.tileRadius))
+                        .padding(.horizontal, OffgridTheme.screenPadding)
                 }
             }
             .padding(.vertical)
         }
+        .background(OffgridTheme.background)
+        .preferredColorScheme(.dark)
         .navigationTitle("Live Overview")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
