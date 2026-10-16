@@ -92,4 +92,23 @@ public struct ReadOnlyPublisher {
     public func keepalive() throws {
         try publish(topic: "R/" + portalId + "/keepalive", payload: "")
     }
+
+    /// Validates a portal ID string
+    /// - Parameter portalId: The portal ID to validate
+    /// - Returns: true if the portal ID is valid, false otherwise
+    public static func isValidPortalId(_ portalId: String) -> Bool {
+        guard !portalId.isEmpty else {
+            return false
+        }
+
+        // Check for forbidden characters: /, +, #, whitespace, NUL
+        let forbiddenChars: [Character] = ["/", "+", "#", " ", "\t", "\n", "\r", "\0"]
+        for char in forbiddenChars {
+            if portalId.contains(char) {
+                return false
+            }
+        }
+
+        return true
+    }
 }

@@ -41,6 +41,8 @@ public final class ConnectionManager {
     public var onPortalIdDetected: ((String) -> Void)?
     /// Called on `queue` after each message has been passed to the LiveDataStore.
     public var onMessage: ((String) -> Void)?
+    /// Called on `queue` when the portal ID is detected and saved to the profile.
+    public var onPortalIdSaved: ((String) -> Void)?
 
     /// History store for managing history data
     public let historyStore = HistoryStore()
@@ -57,6 +59,8 @@ public final class ConnectionManager {
     private var trustRejected = false   // set when the pinned certificate didn't match (only touched on `queue`)
     private var refused: ConnectionError?   // set when CONNACK is refused (only touched on `queue`)
     private var fullPublishCompleted = false
+    private var profileStore: ConnectionProfileStoring?
+    private var profile: ConnectionProfile?
 
     /// - Parameters:
     ///   - keepaliveInterval: seconds between Victron keepalives (must stay under the Cerbo's 60 s timeout).
@@ -67,6 +71,7 @@ public final class ConnectionManager {
         self.liveDataStore = liveDataStore
         self.keepaliveInterval = keepaliveInterval
         self.queue = queue
+        self.profile = profile
         mqtt = CocoaMQTT(clientID: "VictronKit-" + UUID().uuidString, host: profile.host, port: port)
         mqtt.delegateQueue = queue
         mqtt.keepAlive = 60                       // MQTT PINGREQ, handled by CocoaMQTT
@@ -103,6 +108,20 @@ public final class ConnectionManager {
         
         if let known = profile.portalId { try usePortalId(known) }
         setUpCallbacks()
+    }
+
+    /// Initialize with profile store for saving detected portal IDs
+    /// - Parameters:
+    ///   - profile: The connection profile
+    ///   - profileStore: The profile store for saving detected portal IDs
+    ///   - liveDataStore: The live data store
+    ///   - password: The password for the connection
+    ///   - keepaliveInterval: seconds between Victron keepalives
+    ///   - queue: where all callbacks and state changes happen
+    public convenience init(profile: ConnectionProfile, profileStore: ConnectionProfileStoring, liveDataStore: LiveDataStore, password: String? = nil,
+                keepaliveInterval: TimeInterval = 30, queue: DispatchQueue = .main) throws {
+        try self.init(profile: profile, liveDataStore: liveDataStore, password: password, keepaliveInterval: keepaliveInterval, queue: queue)
+        self.profileStore = profileStore
     }
 
     public func connect() {
@@ -169,7 +188,17 @@ public final class ConnectionManager {
         if portalId == nil {
             let parts = topic.split(separator: "/", omittingEmptySubsequences: false)
             if parts.count >= 3, parts[0] == "N", !parts[1].isEmpty, (try? usePortalId(String(parts[1]))) != nil {
-                onPortalIdDetected?(String(parts[1]))
+                let detectedPortalId = String(parts[1])
+                onPortalIdDetected?(detectedPortalId)
+                
+                // Save the detected portal ID to the profile if we have a store
+                if let profileStore = profileStore, let profile = profile {
+                    var updatedProfile = profile
+                    updatedProfile.updatePortalId(detectedPortalId)
+                    try? profileStore.updateProfile(updatedProfile, password: nil)
+                    onPortalIdSaved?(detectedPortalId)
+                }
+                
                 startKeepalive()   // now we can ask for the full publish
             }
         }

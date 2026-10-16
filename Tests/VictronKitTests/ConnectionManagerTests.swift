@@ -115,4 +115,5 @@ final class ConnectionManagerTests: XCTestCase {
             XCTAssertEqual(error as? ConnectionError, .invalidPort(0))
         }
     }
+
 }

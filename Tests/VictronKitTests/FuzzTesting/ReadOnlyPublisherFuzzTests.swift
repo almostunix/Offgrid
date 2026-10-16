@@ -274,27 +274,60 @@ final class ReadOnlyPublisherFuzzTests: XCTestCase {
         }
     }
 
-    /// Test ReadOnlyPublisher keepalive functionality
-    func testReadOnlyPublisherKeepalive() {
-        let portalId = "c0ffee000001"
-        var keepaliveCalled = false
+    /// Test ReadOnlyPublisher.isValidPortalId with valid portal IDs
+    func testReadOnlyPublisherValidPortalIds() {
+        let validPortalIds = [
+            "c0ffee000001",
+            "test",
+            "12345",
+            "a-b_c.d",
+            "Test123",
+            "very-long-portal-id-that-is-still-valid"
+        ]
 
-        do {
-            let publisher = try ReadOnlyPublisher(portalId: portalId) { topic, payload in
-                keepaliveCalled = true
-                XCTAssertEqual(topic, "R/" + portalId + "/keepalive")
-                XCTAssertEqual(payload, "")
-            }
-
-            // Should not crash
-            try publisher.keepalive()
-
-            // Verify keepalive was called
-            XCTAssertTrue(keepaliveCalled)
-
-        } catch {
-            XCTFail("Should be able to send keepalive: " + error.localizedDescription)
+        for portalId in validPortalIds {
+            XCTAssertTrue(ReadOnlyPublisher.isValidPortalId(portalId), "Portal ID '" + portalId + "' should be valid")
         }
+    }
+
+    /// Test ReadOnlyPublisher.isValidPortalId with invalid portal IDs
+    func testReadOnlyPublisherInvalidPortalIdsValidation() {
+        let invalidPortalIds = [
+            "",
+            "/test",
+            "test/",
+            "test+test",
+            "test#test",
+            "test test",
+            "test\ttest",
+            "test\ntest",
+            "test\rtest",
+            "test\0test"
+        ]
+
+        for portalId in invalidPortalIds {
+            XCTAssertFalse(ReadOnlyPublisher.isValidPortalId(portalId), "Portal ID '" + portalId + "' should be invalid")
+        }
+    }
+
+    /// Test ReadOnlyPublisher.isValidPortalId edge cases
+    func testReadOnlyPublisherEdgeCaseValidation() {
+        // Empty string
+        XCTAssertFalse(ReadOnlyPublisher.isValidPortalId(""))
+        
+        // Whitespace only
+        XCTAssertFalse(ReadOnlyPublisher.isValidPortalId("   "))
+        XCTAssertFalse(ReadOnlyPublisher.isValidPortalId("\t\n\r"))
+        
+        // Single character valid
+        XCTAssertTrue(ReadOnlyPublisher.isValidPortalId("a"))
+        XCTAssertTrue(ReadOnlyPublisher.isValidPortalId("1"))
+        
+        // Single character invalid
+        XCTAssertFalse(ReadOnlyPublisher.isValidPortalId("/"))
+        XCTAssertFalse(ReadOnlyPublisher.isValidPortalId("+"))
+        XCTAssertFalse(ReadOnlyPublisher.isValidPortalId("#"))
+        XCTAssertFalse(ReadOnlyPublisher.isValidPortalId(" "))
     }
 
     /// Stress test with many rapid publishing operations

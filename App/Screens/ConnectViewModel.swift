@@ -116,7 +116,7 @@ class ConnectViewModel: ObservableObject {
                 startTrustPrompt(for: profile)
             } else {
                 // No prompts needed, connect directly
-                connectionManager = try ConnectionManager(profile: profile, liveDataStore: liveDataStore, password: password)
+                connectionManager = try ConnectionManager(profile: profile, profileStore: profileStore, liveDataStore: liveDataStore, password: password)
                 setupConnectionManagerCallbacks()
                 connectionManager?.connect()
                 connectedProfile = profile
@@ -375,6 +375,18 @@ class ConnectViewModel: ObservableObject {
                 // Only process callbacks from the current manager
                 guard let self = self, self.connectionManager === manager else { return }
                 self.portalId = portalId
+            }
+        }
+
+        connectionManager?.onPortalIdSaved = { [weak self] portalId in
+            DispatchQueue.main.async {
+                // Only process callbacks from the current manager
+                guard let self = self, self.connectionManager === manager else { return }
+                // Update the connected profile with the saved portal ID
+                if var connectedProfile = self.connectedProfile {
+                    connectedProfile.updatePortalId(portalId)
+                    self.connectedProfile = connectedProfile
+                }
             }
         }
         

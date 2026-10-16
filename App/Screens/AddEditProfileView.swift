@@ -12,6 +12,7 @@ struct AddEditProfileView: View {
     @State private var useTLS: Bool = false
     @State private var username: String = ""
     @State private var password: String = ""
+    @State private var portalId: String = ""
 
     var body: some View {
         NavigationStack {
@@ -27,6 +28,10 @@ struct AddEditProfileView: View {
                 Section(header: Text("Credentials")) {
                     TextField("Username", text: $username)
                     SecureField(profile?.passwordKeychainReference != nil ? "Password saved" : "Password", text: $password)
+                }
+
+                Section(header: Text("Advanced")) {
+                    TextField("Portal ID (VRM ID)", text: $portalId)
                 }
             }
             .navigationTitle(profile == nil ? "Add Connection" : "Edit Connection")
@@ -51,6 +56,7 @@ struct AddEditProfileView: View {
                     portString = String(profile.port)
                     useTLS = profile.useTLS
                     username = profile.username ?? ""
+                    portalId = profile.portalId ?? ""
                 }
             }
         }
@@ -58,10 +64,14 @@ struct AddEditProfileView: View {
 
     private func saveProfile() {
         let port = Int(portString) ?? 1883
-        let newProfile = ConnectionProfile(name: name, host: host, port: port, useTLS: useTLS, username: username.isEmpty ? nil : username)
+        // Optional portal ID: trimmed, lower-cased, and dropped unless it is a valid portal ID
+        let typedPortalId = portalId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let portalIdToSave: String? = ReadOnlyPublisher.isValidPortalId(typedPortalId) ? typedPortalId : nil
+        var newProfile = ConnectionProfile(name: name, host: host, port: port, useTLS: useTLS, username: username.isEmpty ? nil : username)
+        newProfile.portalId = portalIdToSave
         let profile = profile?.id == nil ? 
             newProfile :
-            ConnectionProfile(id: profile!.id, name: name, host: host, port: port, useTLS: useTLS, username: username.isEmpty ? nil : username, passwordKeychainReference: profile!.passwordKeychainReference, portalId: profile!.portalId, lastUsed: profile!.lastUsed, createdAt: profile!.createdAt, updatedAt: Date(), pinnedCertificateSHA256: pinAfterEdit(old: profile!, new: newProfile))
+            ConnectionProfile(id: profile!.id, name: name, host: host, port: port, useTLS: useTLS, username: username.isEmpty ? nil : username, passwordKeychainReference: profile!.passwordKeychainReference, portalId: portalIdToSave, lastUsed: profile!.lastUsed, createdAt: profile!.createdAt, updatedAt: Date(), pinnedCertificateSHA256: pinAfterEdit(old: profile!, new: newProfile))
         onSave(profile, password.isEmpty ? nil : password)
         isPresented = false
     }
